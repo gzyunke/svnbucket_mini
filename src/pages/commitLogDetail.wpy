@@ -1,0 +1,200 @@
+<style lang="scss">
+    .header-container
+    {
+        position: relative;
+        background-color: white;
+        height: 128rpx;
+        width:100%;
+    }
+
+    .head-icon
+    {
+        position:absolute;
+        width:82rpx;
+        height:82rpx;
+        border-radius: 50%;
+        left:30rpx;
+        top:21rpx;
+    }
+
+    .nickname
+    {
+        font-size: 16px;
+        color:#7F8389;
+        position: absolute;
+        left: 134rpx;
+        top: 42rpx;
+    }
+
+    .time-text
+    {
+        font-size: 14px;
+        color:#BBBBBB;
+        position: absolute;
+        right: 30rpx;
+        top: 44rpx;
+    }
+
+    .title-text
+    {
+        position: relative;
+        font-size: 16px;
+        color:#7F8389;
+        left:30rpx;
+        text-align: center;
+        line-height: 88rpx;
+        height: 88rpx;
+        font-weight:600;
+    }
+
+    .desc-text
+    {
+        display: block;
+        position: relative;
+        background-color: white;
+        color:#7F8389;
+        font-size: 14px;
+        padding: 20rpx 30rpx 20rpx 30rpx;
+    }
+
+    .file-item
+    {
+        position: relative;
+        background: white;
+        font-size: 16px;
+        color:#7F8389;
+        height: 88rpx;
+        width: 100%;
+        margin-bottom: 2rpx;
+    }
+
+    .right_icon
+    {
+        position: absolute;
+        right:30rpx;
+        width: 37rpx;
+        height: 35rpx;
+        top:30rpx;
+    }
+
+    .state-icon
+    {
+        position:absolute;
+        left:30rpx;
+        top:33rpx;
+        width:26rpx;
+        height:28rpx;
+    }
+
+    .file-name-text
+    {
+        position: absolute;
+        left:72rpx;
+        top:22rpx;
+        width: 600rpx;
+        overflow: hidden;
+        text-overflow:ellipsis;
+        white-space: nowrap;
+    }
+
+</style>
+<template>
+    <view >
+        <view class="header-container">
+            <image class="head-icon" src="{{headURL}}"/>
+            <text class="nickname">{{logInfo.name}}</text>
+            <text class="time-text">{{logInfo.time}}</text>
+        </view>
+
+        <text class="title-text">描述内容</text>
+        <text class="desc-text">{{logInfo.msg}}</text>
+
+        <text class="title-text">变更文件({{count}})</text>
+        <repeat for="{{datas}}" key="index" index="index" item="item">
+            <view class="file-item" @tap="viewDiff" data-info="{{item}}">
+                <image class="state-icon" src="../images/state-{{item[0]}}.png"/>
+                <text class="file-name-text">{{item[1]}}</text>
+                <image class="right_icon" src="../images/arrowRight.png"/>
+            </view>
+        </repeat>
+    </view>
+</template>
+
+<script>
+    import wepy from 'wepy'
+    import {tools} from '../common/tools'
+
+    export default class Index extends wepy.page
+    {
+        config = {
+            navigationBarTitleText: '提交详情',
+        };
+
+        data = {
+            logInfo:{},
+            headURL:'',
+            datas:[],
+            count:0,
+        }
+
+        methods = {
+            viewDiff(e)
+            {
+                let info = e.currentTarget.dataset.info
+                if(info[1] && info[1][info[1].length - 1] === '/')
+                {
+                    wepy.showToast({
+                        title: '目录无法查看变更内容',
+                        icon: 'none',
+                        duration: 2000
+                    })
+                    return
+                }
+                this.$parent.globalData.sourceInfo = {
+                    pid:this.logInfo.projectId,
+                    path:info[1],
+                    state:info[0],
+                    rev: this.logInfo.revision,
+                }
+                wepy.navigateTo({
+                    url: 'source'
+                })
+            }
+        }
+
+
+        onLoad()
+        {
+            // this.headURL = tools.imgFullPath('fang.jpg', 'head', 5, 82)
+            this.logInfo = this.$parent.globalData.currentLogInfo
+            if(!this.logInfo)
+                return
+
+            this.logInfo.msg = this.logInfo.msg === '' ? '没有提交描述' : this.logInfo.msg;
+
+            wepy.setNavigationBarTitle({title: 'r' + this.logInfo.revision})
+            this.headURL = tools.imgFullPath(this.logInfo.head, 'head', 5, 82)
+            this.getDatas()
+        }
+
+        getDatas()
+        {
+            wepy.request({
+                url: '/api/verChangeFiles',
+                method: 'POST',
+                data: {
+                    projectId: this.logInfo.projectId,
+                    rev: this.logInfo.revision,
+                }
+            }).then(res =>
+            {
+                if (res.data.success === false)
+                    return
+
+                this.datas = res.data.changes
+                this.count = this.datas.length
+                this.$apply();
+            })
+        }
+    }
+</script>

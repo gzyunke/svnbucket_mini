@@ -1,0 +1,231 @@
+<style lang="scss">
+
+    .bottom-container
+    {
+        display: block;
+        background-color: #F2F6FC;
+        width:100%;
+        height:100%;
+        position: relative;
+    }
+
+    .menu-group
+    {
+        font-size: 16px;
+        color: #7F8389;
+        position: relative;
+        margin-top: 10rpx;
+    }
+
+    .list_menu
+    {
+        position: relative;
+        height: 88rpx;
+        vertical-align:middle;
+        line-height: 88rpx;
+        margin-bottom: 2rpx;
+        background-color: white;
+    }
+
+    .back_menu
+    {
+        margin: 20rpx 0 20rpx 0;
+    }
+
+    .left_icon
+    {
+        position:absolute;
+        width:36rpx;
+        height:36rpx;
+        left:97rpx;
+        top:26rpx;
+    }
+
+    .back_icon
+    {
+        position:absolute;
+        width:44rpx;
+        height:29rpx;
+        left:27rpx;
+        top:31rpx;
+    }
+
+    .left_text
+    {
+        position: absolute;
+        left:138rpx;
+        width: 450rpx;
+        overflow: hidden;
+        text-overflow:ellipsis;
+        white-space: nowrap;
+    }
+
+    .right_text
+    {
+        position: absolute;
+        right:73rpx;
+        font-size: 14px;
+        color: #BBBBBB;
+    }
+
+    .right_icon
+    {
+        position: absolute;
+        right:30rpx;
+        width: 37rpx;
+        height: 35rpx;
+        top:26rpx;
+    }
+
+    .check-area
+    {
+        position:absolute;
+        width: 88rpx;
+        height: 88rpx;
+        top:23rpx;
+        left:30rpx;
+    }
+
+    .check_icon
+    {
+        position:absolute;
+        top:0rpx;
+        left:0rpx;
+        width:45rpx;
+        height:45rpx;
+    }
+
+    .no-logs
+    {
+        position:relative;
+        color:#a4a4a4;
+        width:100%;
+        top:47rpx;
+        display: block;
+        text-align: center;
+        font-style:italic;
+    }
+
+
+</style>
+<template>
+    <view>
+        <text wx:if="{{datas.length <= 0 && currentPath === '/'}}" class="no-logs">
+            您还没有提交过代码
+        </text>
+        <view class="bottom-container">
+            <view class="menu-group">
+                <view wx:if="{{currentPath !== '/'}}" class="list_menu back_menu" @tap="backParent">
+                    <image src="../images/back.png" class="back_icon"/>
+                    <text class="left_text">返回</text>
+                    <text class="right_text">{{parentPath}}</text>
+                    <image class="right_icon" src="../images/arrowRight.png"/>
+                </view>
+                <repeat for="{{datas}}" key="index" index="index" item="data">
+                    <view class="list_menu" @tap.stop="walkIn" data-path="{{data.name}}" data-isdir="{{data.isDir}}">
+                        <view class="check-area" @tap.stop="selectDir" data-path="{{data.name}}">
+                            <image src="../images/check0.png" class="check_icon"/>
+                        </view>
+                        <image src="../images/{{data.isDir ? 'folder' : 'file'}}.png" class="left_icon"/>
+                        <text class="left_text">{{data.name}}</text>
+                        <image class="right_icon" src="../images/arrowRight.png"/>
+                    </view>
+                </repeat>
+            </view>
+        </view>
+    </view>
+</template>
+
+<script>
+    import wepy from 'wepy'
+    import {tools} from '../common/tools'
+
+    export default class Index extends wepy.page {
+        config = {
+            navigationBarTitleText: '源码',
+        };
+
+        data = {
+            pid: '',
+            currentPath: '/',
+            datas: [],
+            parentPath: '',
+        }
+
+        methods = {
+
+            walkIn(e)
+            {
+                let isdir = e.currentTarget.dataset.isdir
+                let path = e.currentTarget.dataset.path
+                if(isdir === 1)
+                {
+                    this.parentPath = path;
+                    this.currentPath += path + '/';
+                    this.getDatas();
+                }
+            },
+
+            selectDir(e)
+            {
+                let path = e.currentTarget.dataset.path
+                this.$parent.globalData.selectedPath = this.currentPath + path
+                wepy.navigateBack()
+            },
+
+            backParent()
+            {
+                if (this.currentPath !== '/')
+                {
+                    let paths = this.currentPath.split("/");
+                    let parents = paths.slice(0, -2);
+                    this.currentPath = parents.join("/") + '/';
+                    this.parentPath = parents[parents.length - 1]
+                    this.getDatas();
+                }
+            }
+        }
+
+        onLoad(options)
+        {
+            this.pid = this.$parent.globalData.currentProjectData._id
+            this.getDatas();
+        }
+
+        getDatas()
+        {
+            wepy.request({
+                url: '/api/getFileList',
+                method: 'POST',
+                data: {
+                    projectId: this.pid,
+                    path: this.currentPath,
+                    onlyDir: 1
+                }
+            }).then(res =>
+            {
+                if(res.data.success === false)
+                    return
+
+                this.datas = res.data.list
+                this.datas.forEach((value, index, array) => {
+                    value.time = tools.formatDateBefore(value.time)
+                });
+                this.$apply()
+            })
+        }
+
+        onShareAppMessage(res)
+        {
+            if (res.from === 'button')
+            {
+                // 来自页面内转发按钮
+                console.log(res.target)
+            }
+            return {
+                title: 'SVNBucket，好用的SVN托管服务',
+                path: 'pages/launch'
+            }
+        }
+    }
+</script>

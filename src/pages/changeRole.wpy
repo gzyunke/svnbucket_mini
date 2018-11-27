@@ -1,0 +1,125 @@
+<style lang="scss">
+    .top-container
+    {
+        margin-top: 120rpx;
+    }
+    .row-menu
+    {
+        position: relative;
+        height:120rpx;
+        background-color: white;
+        text-align: center;
+        line-height: 120rpx;
+        font-size: 16px;
+        color: #7F8389;
+        margin-bottom: 2rpx;
+    }
+
+    .title-text
+    {
+        position: absolute;
+        left: 30rpx;
+    }
+
+    .desc-text
+    {
+        position: absolute;
+        left: 182rpx;
+        font-size: 14px;
+        color: #BBBBBB;
+    }
+
+    .search-icon
+    {
+        position: absolute;
+        right: 50rpx;
+        top: 30rpx;
+    }
+
+    .ct-button
+    {
+        position: relative;
+        margin-top: 120rpx;
+        width: 690rpx;
+        background-color: #409EFF;
+        color: white;
+        height: 94rpx;
+        line-height: 94rpx;
+    }
+
+</style>
+<template>
+    <view class="top-container">
+        <view class="row-menu" @tap="setManager">
+            <text class="title-text">管理员</text>
+            <text class="desc-text">拥有管理项目成员、钩子权限</text>
+            <icon wx:if="{{role === 'manager'}}" type="success_no_circle" size="30" class="search-icon"/>
+        </view>
+        <view class="row-menu" @tap="setNormal">
+            <text class="title-text">普通成员</text>
+            <text class="desc-text">无项目管理权限</text>
+            <icon wx:if="{{role === 'normal'}}" type="success_no_circle" size="30" class="search-icon"/>
+        </view>
+        <button @tap="saveRole" class="ct-button">保存修改</button>
+    </view>
+</template>
+
+<script>
+    import wepy from 'wepy'
+
+    export default class Index extends wepy.page
+    {
+        config = {
+            navigationBarTitleText: '角色设置',
+        };
+
+
+        data = {
+            role:'',
+            uid:'',
+            pid: '',
+        }
+
+        methods = {
+            setManager()
+            {
+                this.role = 'manager'
+            },
+            setNormal()
+            {
+                this.role = 'normal'
+            },
+            saveRole()
+            {
+                wepy.request({
+                    url: '/api/setMemberRole',
+                    method: 'POST',
+                    data: {
+                        projectId: this.pid,
+                        userids: this.uid,
+                        role: this.role,
+                    }
+                }).then(res =>
+                {
+                    if (res.data.success === false)
+                        return
+                    this.$parent.globalData.refreshMembers = true;
+                    wepy.navigateBack()
+                    wepy.showToast({
+                        title: '保存成功',
+                        icon: 'none',
+                        duration: 2000
+                    })
+                })
+            }
+        }
+
+        onLoad(options)
+        {
+            this.pid = this.$parent.globalData.currentProjectData._id
+            this.uid = options.uid
+            this.role = options.role
+        }
+
+    }
+</script>

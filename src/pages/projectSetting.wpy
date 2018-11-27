@@ -1,0 +1,234 @@
+<style lang="scss">
+    .input-container
+    {
+        font-size: 16px;
+        background-color: white;
+        height: 88rpx;
+        top: 88rpx;
+        width:100%;
+        position: absolute;
+    }
+
+    .form-item
+    {
+        position: relative;
+        height: 180rpx;
+    }
+
+    .img-item
+    {
+        height: 257rpx;
+    }
+
+    .form-input
+    {
+        position: absolute;
+        left:30rpx;
+        height:88rpx;
+        width:690rpx;
+    }
+
+    .ct-button
+    {
+        margin-top: 88rpx;
+        width: 690rpx;
+        background-color: #409EFF;
+        color: white;
+        height: 94rpx;
+        line-height: 94rpx;
+    }
+
+
+    .delete-button
+    {
+        margin-top: 88rpx;
+        width: 690rpx;
+        background-color: #E64340;
+        color: white;
+        height: 94rpx;
+        line-height: 94rpx;
+    }
+
+    .form-title
+    {
+        font-size: 16px;
+        color: #7F8389;
+        position: absolute;
+        left: 30rpx;
+        top: 22rpx;
+        font-weight:600;
+    }
+
+    .cover-img
+    {
+        position: absolute;
+        width: 332rpx;
+        height: 166rpx;
+        border-radius: 8rpx;
+        left: 31rpx;
+        top: 88rpx;
+    }
+
+    .list_menu
+    {
+        position: relative;
+        height: 88rpx;
+        line-height: 88rpx;
+        vertical-align:middle;
+        margin-top: 88rpx;
+        background-color: white;
+    }
+
+    .left-text
+    {
+        position: absolute;
+        left:30rpx;
+        height: 88rpx;
+        font-size: 14px;
+        color: #7F8389;
+    }
+
+    .right-icon {
+        position:absolute;
+        top:23rpx;
+        right:30rpx;
+        width:45rpx;
+        height:45rpx;
+    }
+
+</style>
+<template>
+    <view >
+        <view class="form-item img-item">
+            <text class="form-title">项目封面</text>
+            <image class="cover-img" src="{{imgURL}}"/>
+        </view>
+        <view class="form-item">
+            <text class="form-title">项目名字</text>
+            <view class="input-container">
+                <input placeholder="字母、数字、下划线组合" class="form-input" bindinput="onNameInput"  placeholder-style="color:#B2B2B2" value="{{name}}"/>
+            </view>
+        </view>
+        <view class="form-item">
+            <text class="form-title">项目简介</text>
+            <view class="input-container">
+                <input placeholder="简单的介绍下项目" class="form-input" bindinput="onDescInput"  placeholder-style="color:#B2B2B2" value="{{desc}}"/>
+            </view>
+        </view>
+
+        <view class="list_menu" @tap="onCheck">
+            <view class="left-text">强制填写提交描述</view>
+            <image src="../images/check{{forceMsg}}.png" class="right-icon"/>
+        </view>
+
+        <view class="form-item">
+            <button wx:if="{{role === 'owner' || role === 'manager'}}" @tap="saveChange" class="ct-button">保存修改</button>
+            <button wx:if="{{role === 'owner'}}" @tap="deleteProject" class="delete-button">删除项目</button>
+        </view>
+    </view>
+</template>
+
+<script>
+    import wepy from 'wepy'
+    import {tools} from '../common/tools'
+
+    export default class Index extends wepy.page
+    {
+        config = {
+            navigationBarTitleText: '项目设置',
+        };
+
+        data = {
+            name: '',
+            desc: '',
+            imgURL:'',
+            pid:'',
+            role:'',
+            forceMsg:'0',
+        }
+
+        methods = {
+            saveChange()
+            {
+                wepy.request({
+                    url: '/api/updateProject',
+                    method: 'POST',
+                    data: {
+                        projectId: this.pid,
+                        name: this.name,
+                        desc: this.desc,
+                        imgURL: this.imgURL,
+                        forceMsg: this.forceMsg,
+                    }
+                }).then(res =>
+                {
+                    if(res.data.success !== false)
+                    {
+                        this.$parent.globalData.currentProjectData = res.data
+                        wepy.showToast({
+                            title: '保存成功',
+                            icon: 'none',
+                            duration: 2000
+                        })
+                    }
+
+                })
+            },
+            async deleteProject()
+            {
+                const res = await wepy.showModal({
+                    title: '警告',
+                    content: '一旦你删除了项目，所有与项目有关的信息将会被永久删除。这是一个不可恢复的操作，确定删除吗?'
+                })
+
+                if(res.confirm)
+                {
+                    wepy.request({
+                        url: '/api/deleteProject',
+                        method: 'POST',
+                        data: {
+                            projectId: this.pid,
+                        }
+                    }).then(res =>
+                    {
+                        if(res.data.success !== false)
+                        {
+                            this.$parent.globalData.refreshProjects = true
+                            this.$switch('projects');
+                            wepy.showToast({
+                                title: '删除成功',
+                                icon: 'none',
+                                duration: 2000
+                            })
+                        }
+                    })
+                }
+            },
+            onCheck()
+            {
+                this.forceMsg = this.forceMsg === '0' ? '1' : '0'
+            }
+        }
+
+
+        onNameInput(e)
+        {
+            this.name = e.detail.value
+        }
+
+        onDescInput(e)
+        {
+            this.desc = e.detail.value
+        }
+
+        onLoad()
+        {
+            this.role = this.$parent.globalData.currentProjectData.role
+            this.name = this.$parent.globalData.currentProjectData.name
+            this.imgURL = tools.imgFullPath(this.$parent.globalData.currentProjectData.imgURL, 'cover', 1, 332, 166);
+            this.desc = this.$parent.globalData.currentProjectData.desc
+            this.pid = this.$parent.globalData.currentProjectData._id
+            this.forceMsg = this.$parent.globalData.currentProjectData.forceMsg ? this.$parent.globalData.currentProjectData.forceMsg : '0'
+        }
+    }
+</script>

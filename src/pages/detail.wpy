@@ -1,0 +1,225 @@
+<style lang="scss">
+
+    .bottom-container
+    {
+        display: block;
+        background-color: #F2F6FC;
+        width:100%;
+        height:100%;
+        position: relative;
+    }
+
+    .menu-group
+    {
+        font-size: 16px;
+        color: #7F8389;
+        position: relative;
+        margin-top: 10rpx;
+    }
+
+    .location-bar
+    {
+        margin-top: 50rpx;
+        margin-bottom: 50rpx;
+    }
+
+    .list_menu
+    {
+        position: relative;
+        height: 88rpx;
+        vertical-align:middle;
+        line-height: 88rpx;
+        margin-bottom: 2rpx;
+        background-color: white;
+    }
+
+    .left_icon
+    {
+        position:absolute;
+        width:61rpx;
+        height:63rpx;
+        left:16rpx;
+        top:14rpx;
+    }
+
+    .left_text
+    {
+        position: absolute;
+        left:81rpx;
+    }
+
+    .right_text
+    {
+        position: absolute;
+        right:73rpx;
+        font-size: 14px;
+        color: #BBBBBB;
+    }
+
+    .svn_url
+    {
+        position: absolute;
+        right:167rpx;
+        font-size: 12px;
+        color: #409EFF;
+        left: 160rpx;
+        width: 430rpx;
+        overflow: hidden;
+        text-overflow:ellipsis;
+        white-space: nowrap;
+    }
+
+    .right_icon
+    {
+        position: absolute;
+        right:30rpx;
+        width: 37rpx;
+        height: 35rpx;
+        top:26rpx;
+    }
+
+    .copy-button
+    {
+        position: absolute;
+        width: 122rpx;
+        background-color: #409EFF;
+        color: white;
+        height: 62rpx;
+        line-height: 62rpx;
+        right: 30rpx;
+        top: 14rpx;
+        font-size: 14px;
+    }
+
+</style>
+<template>
+    <view class="container">
+        <view class="bottom-container">
+            <view class="menu-group location-bar">
+                <view class="list_menu">
+                    <image class="head-img" src="../images/location.png" class="left_icon"/>
+                    <text class="left_text">地址</text>
+                    <text class="svn_url">{{svnURL}}</text>
+                    <button class="copy-button" @tap="copyURL">复制</button>
+                </view>
+            </view>
+            <view class="menu-group">
+                <navigator url="sourceList" hover-class="none">
+                    <view class="list_menu">
+                        <image class="head-img" src="../images/source.png" class="left_icon"/>
+                        <text class="left_text">源码</text>
+                        <text class="right_text">{{email}}</text>
+                        <image class="right_icon" src="../images/arrowRight.png"/>
+                    </view>
+                </navigator>
+                <navigator url="commitLogs" hover-class="none">
+                    <view class="list_menu">
+                        <image class="head-img" src="../images/commitLog.png" class="left_icon"/>
+                        <text class="left_text">提交记录</text>
+                        <text class="right_text">{{mobile}}</text>
+                        <image class="right_icon" src="../images/arrowRight.png"/>
+                    </view>
+                </navigator>
+                <navigator url="members" hover-class="none">
+                    <view class="list_menu">
+                        <image class="head-img" src="../images/members.png" class="left_icon"/>
+                        <text class="left_text">成员</text>
+                        <text class="right_text">{{memberCount}} 个</text>
+                        <image class="right_icon" src="../images/arrowRight.png"/>
+                    </view>
+                </navigator>
+                <navigator url="hooks" hover-class="none">
+                    <view class="list_menu">
+                        <image class="head-img" src="../images/hook.png" class="left_icon"/>
+                        <text class="left_text">钩子</text>
+                        <!--<text class="right_text"></text>-->
+                        <image class="right_icon" src="../images/arrowRight.png"/>
+                    </view>
+                </navigator>
+                <navigator url="projectSetting" hover-class="none">
+                    <view class="list_menu">
+                        <image class="head-img" src="../images/projectSetting.png" class="left_icon"/>
+                        <text class="left_text">项目设置</text>
+                        <!--<text class="right_text"></text>-->
+                        <image class="right_icon" src="../images/arrowRight.png"/>
+                    </view>
+                </navigator>
+            </view>
+        </view>
+    </view>
+</template>
+
+<script>
+    import wepy from 'wepy'
+
+    export default class Index extends wepy.page {
+        config = {
+            navigationBarTitleText: '',
+        };
+
+        data = {
+            pid: '',
+            svnURL: '',
+            memberCount: '',
+            name: '',
+        }
+
+        methods = {
+            copyURL()
+            {
+                wx.setClipboardData({
+                    data: this.svnURL,
+                    success: function(res) {
+                        wepy.showToast({
+                            title: '复制成功',
+                            icon: 'none',
+                            duration: 2000
+                        })
+                    }
+                })
+            }
+        }
+
+        onLoad(options)
+        {
+            this.pid = options.pid;
+            this.getData();
+        }
+
+        getData()
+        {
+            wepy.request({
+                url: '/api/projectDetail',
+                method: 'POST',
+                data: {
+                    projectId: this.pid,
+                }
+            }).then(res =>
+            {
+                if(res.data.success === false)
+                    return
+
+                this.svnURL = res.data.svnURL
+                this.memberCount = res.data.memberCount
+                this.name = res.data.name
+                this.$parent.globalData.currentProjectData = res.data
+                wepy.setNavigationBarTitle({title: this.name})
+                this.$apply()
+            })
+        }
+
+        onShareAppMessage(res)
+        {
+            if (res.from === 'button')
+            {
+                // 来自页面内转发按钮
+                console.log(res.target)
+            }
+            return {
+                title: 'SVNBucket，好用的SVN托管服务',
+                path: 'pages/launch'
+            }
+        }
+
+    }
+</script>

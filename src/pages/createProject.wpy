@@ -1,0 +1,163 @@
+<style lang="scss">
+    .input-container
+    {
+        font-size: 16px;
+        background-color: white;
+        height: 88rpx;
+        top: 88rpx;
+        width:100%;
+        position: absolute;
+    }
+
+    .form-item
+    {
+        position: relative;
+        height: 180rpx;
+    }
+
+    .form-input
+    {
+        position: absolute;
+        left:30rpx;
+        height:88rpx;
+        width:690rpx;
+    }
+
+    .ct-button
+    {
+        margin-top: 88rpx;
+        width: 690rpx;
+        background-color: #409EFF;
+        color: white;
+        height: 94rpx;
+        line-height: 94rpx;
+    }
+
+    .form-title
+    {
+        font-size: 16px;
+        color: #7F8389;
+        position: absolute;
+        left: 30rpx;
+        top: 22rpx;
+        font-weight:600;
+    }
+
+    .list_menu
+    {
+        position: relative;
+        height: 88rpx;
+        line-height: 88rpx;
+        vertical-align:middle;
+        margin-top: 88rpx;
+        background-color: white;
+    }
+
+    .left-text
+    {
+        position: absolute;
+        left:30rpx;
+        height: 88rpx;
+        font-size: 14px;
+        color: #7F8389;
+    }
+
+    .right-icon {
+        position:absolute;
+        top:23rpx;
+        right:30rpx;
+        width:45rpx;
+        height:45rpx;
+    }
+
+</style>
+<template>
+    <view >
+        <view class="form-item">
+            <text class="form-title">项目名字 (字母、数字、下划线组合)</text>
+            <view class="input-container">
+                <input placeholder="字母、数字、下划线组合" class="form-input" bindinput="onNameInput"  placeholder-style="color:#B2B2B2" focus="{{true}}"/>
+            </view>
+        </view>
+        <view class="form-item">
+            <text class="form-title">项目简介</text>
+            <view class="input-container">
+                <input placeholder="简单的介绍下项目" class="form-input" bindinput="onDescInput"  placeholder-style="color:#B2B2B2"/>
+            </view>
+        </view>
+
+        <view class="list_menu" @tap="onCheck">
+            <view class="left-text">自动创建trunk、branches、tags目录结构</view>
+            <image src="../images/check{{initdir}}.png" class="right-icon"/>
+        </view>
+
+        <view class="form-item">
+            <button @tap="create" class="ct-button">创建私有项目</button>
+        </view>
+
+    </view>
+</template>
+
+<script>
+    import wepy from 'wepy'
+
+    export default class Index extends wepy.page
+    {
+        config = {
+            navigationBarTitleText: '创建项目',
+        };
+
+        data = {
+            name: '',
+            desc: '',
+            initdir: '0',
+        }
+
+        methods = {
+            create()
+            {
+                if(!this.name || !this.desc)
+                {
+                    wepy.showToast({
+                        title: '请填写完整',
+                        icon: 'none',
+                        duration: 2000
+                    })
+                    return
+                }
+                wepy.request({
+                    url: '/api/newProject',
+                    method: 'POST',
+                    data: {
+                        name: this.name,
+                        desc: this.desc,
+                        initdir: this.initdir,
+                    }
+                }).then(res =>
+                {
+                    if(res.data.success !== false)
+                    {
+                        console.log(res.data)
+                        this.$parent.globalData.refreshProjects = true
+                        this.$switch('projects');
+                    }
+                })
+            },
+            onCheck()
+            {
+                this.initdir = this.initdir === '0' ? '1' : '0'
+            }
+        }
+
+        onNameInput(e)
+        {
+            this.name = e.detail.value
+        }
+
+        onDescInput(e)
+        {
+            this.desc = e.detail.value
+        }
+
+    }
+</script>

@@ -1,0 +1,344 @@
+<style lang="scss">
+
+    .bottom-container
+    {
+        display: block;
+        background-color: #F2F6FC;
+        width:100%;
+        height:100%;
+        position: relative;
+    }
+
+    .menu-group
+    {
+        font-size: 16px;
+        color: #7F8389;
+        position: relative;
+        margin-top: 10rpx;
+    }
+
+    .list_menu
+    {
+        position: relative;
+        height: 122rpx;
+        vertical-align:middle;
+        line-height: 122rpx;
+        margin-bottom: 2rpx;
+        background-color: white;
+    }
+
+    .back_menu
+    {
+        margin: 20rpx 0 20rpx 0;
+    }
+
+    .left_icon
+    {
+        position:absolute;
+        width:82rpx;
+        height:82rpx;
+        border-radius: 50%;
+        left:30rpx;
+        top:21rpx;
+    }
+
+    .left-top-text
+    {
+        position: absolute;
+        left:142rpx;
+        height: 50rpx;
+        top: -17rpx;
+    }
+
+    .left-bottom-text
+    {
+        position: absolute;
+        left:142rpx;
+        top: 24rpx;
+        height: 50rpx;
+        color: #A4A4A4;
+        font-size: 14px;
+    }
+
+    .permisssion-text
+    {
+        position:absolute;
+        left:300rpx;
+        top:15rpx;
+        color:#A4A4A4;
+        font-size:14px;
+        width:300rpx;
+        line-height:30rpx;
+        text-align:right;
+        vertical-align:middle;
+        height:122rpx;
+    }
+
+    .right_text
+    {
+        position: absolute;
+        right:73rpx;
+        font-size: 14px;
+        color: #BBBBBB;
+    }
+
+    .right_icon
+    {
+        position:absolute;
+        right:22rpx;
+        width:37rpx;
+        height:35rpx;
+        top:28rpx;
+    }
+
+    .top-bar
+    {
+        position: relative;
+        height: 88rpx;
+        font-weight:600;
+        text-align: center;
+        line-height: 98rpx;
+    }
+
+    .member-text
+    {
+        position: absolute;
+        font-size: 16px;
+        color:#7F8389;
+        left:30rpx;
+    }
+
+    .add-user-text
+    {
+        position: absolute;
+        font-size: 16px;
+        color:#409EFF;
+        right:30rpx;
+    }
+
+    .menu-area
+    {
+        position:absolute;
+        top:20rpx;
+        right:37rpx;
+        width:100rpx;
+        height:88rpx;
+    }
+
+</style>
+<template>
+    <view>
+        <view class="top-bar">
+            <text class="member-text">成员（{{totalMember}}）</text>
+            <text class="add-user-text" @tap="gotoSearchMembers">添加成员</text>
+        </view>
+
+        <view class="bottom-container">
+            <view class="menu-group">
+                <repeat for="{{datas}}" key="{{user._id}}" index="index" item="user">
+                    <view class="list_menu">
+                        <image src="{{user.head}}" class="left_icon"/>
+                        <view class="left-top-text">{{user.name}}</view>
+                        <view class="left-bottom-text">{{user.roleName}}</view>
+                        <!--<view class="permisssion-text">{{user.permissionStr}}</view>-->
+                        <view class="menu-area" @tap="showMenu" data-user="{{user}}">
+                            <image class="right_icon" src="../images/3dot.png"/>
+                        </view>
+                    </view>
+                </repeat>
+            </view>
+        </view>
+    </view>
+</template>
+
+<script>
+    import wepy from 'wepy'
+    import {tools} from '../common/tools'
+
+    export default class Index extends wepy.page
+    {
+        config = {
+            navigationBarTitleText: '成员',
+            enablePullDownRefresh: true,
+        };
+
+
+        data = {
+            pid:'',
+            page: 1,
+            pageSize: 20,
+            hasMore: true,
+            datas: [],
+            resetData: false,
+            totalMember:1,
+        }
+
+        methods = {
+            async showMenu(e)
+            {
+                let user = e.currentTarget.dataset.user
+                // console.log(user)
+                let res = await wepy.showActionSheet({itemList: ['目录权限', '角色', '删除']})
+                // 判断权限
+                if(this.$parent.globalData.currentProjectData.role === 'normal')
+                {
+                    wepy.showToast({
+                        title: '只有创建者和管理员才能操作',
+                        icon: 'none',
+                        duration: 2000
+                    })
+                    return
+                }
+                // console.log(res)
+                if(res.tapIndex === 2)
+                {
+                    this.deleteMember(user._id)
+                }
+                else if(res.tapIndex === 0)
+                {
+                    this.$parent.globalData.permissions = user.permissions
+                    this.$parent.globalData.selectedUids = [user._id]
+                    wepy.navigateTo({
+                        url: 'changeDirAuth'
+                    })
+                }
+                else if(res.tapIndex === 1)
+                {
+                    if(user.role === 'owner')
+                    {
+                        wepy.showToast({
+                            title: '不能修改拥有者的角色',
+                            icon: 'none',
+                            duration: 2000
+                        })
+                        return
+                    }
+                    wepy.navigateTo({
+                        url: 'changeRole?uid=' + user._id + '&role=' + user.role
+                    })
+                }
+            },
+            gotoSearchMembers()
+            {
+                if(this.$parent.globalData.currentProjectData.role === 'normal')
+                {
+                    wepy.showToast({
+                        title: '只有创建者和管理员才能操作',
+                        icon: 'none',
+                        duration: 2000
+                    })
+                    return
+                }
+                wepy.navigateTo({
+                    url: 'searchMembers'
+                })
+            }
+        }
+
+        deleteMember(uid)
+        {
+            wepy.request({
+                url: '/api/deleteMembers',
+                method: 'POST',
+                data: {
+                    projectId: this.pid,
+                    userids: uid,
+                }
+            }).then(res =>
+            {
+                if (res.data.success === false)
+                    return
+                wepy.showToast({
+                    title: '删除成功',
+                    icon: 'none',
+                    duration: 2000
+                })
+                this.onPullDownRefresh()
+            })
+        }
+
+        getDatas()
+        {
+            wepy.request({
+                url: '/api/memberList',
+                method: 'POST',
+                data: {
+                    projectId: this.pid,
+                    page: this.page,
+                    pageSize: this.pageSize,
+                }
+            }).then(res =>
+            {
+                wepy.stopPullDownRefresh();
+                if(res.data.success === false)
+                    return
+
+                if(this.resetData)
+                {
+                    this.datas = [];
+                    this.resetData = false;
+                }
+
+                res.data.list.forEach((value, index, array) => {
+                    value.roleName = this.formateRole(value.role)
+                    value.head = tools.imgFullPath(value.head, 'head', 5, 100);
+                    // value.permissionStr = ''
+                    // for(let path in value.permissions)
+                    // {
+                    //     value.permissionStr += path + '=' + value.permissions[path] + '\n'
+                    // }
+                    this.datas.push(value)
+                });
+                this.totalMember = res.data.totalCount;
+                this.hasMore = res.data.list.length >= this.pageSize;
+                this.$apply();
+            })
+        }
+
+        formateRole(role)
+        {
+            let name = role
+            if(role === 'normal')
+                name = '普通成员'
+            else if(role === 'manager')
+                name = '管理员'
+            else if(role === 'owner')
+                name = '拥有者'
+            return name
+        }
+
+        onPullDownRefresh()
+        {
+            this.page = 1;
+            this.resetData = true
+            this.getDatas();
+        }
+
+        onReachBottom()
+        {
+            console.log('onReachBottom')
+            if(this.hasMore)
+            {
+                this.page += 1;
+                this.getDatas();
+            }
+        }
+
+        onLoad()
+        {
+            this.pid = this.$parent.globalData.currentProjectData._id
+            this.getDatas()
+        }
+
+        onShow()
+        {
+            if (this.$parent.globalData.refreshMembers)
+            {
+                console.log('refresh members list')
+                this.$parent.globalData.refreshMembers = false
+                this.onPullDownRefresh();
+            }
+        }
+
+    }
+</script>

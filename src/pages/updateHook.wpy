@@ -1,0 +1,206 @@
+<style lang="scss">
+    .input-container
+    {
+        font-size: 16px;
+        background-color: white;
+        height: 88rpx;
+        top: 88rpx;
+        width:100%;
+        position: absolute;
+    }
+
+    .form-item
+    {
+        position: relative;
+        height: 180rpx;
+    }
+
+
+    .form-input
+    {
+        position: absolute;
+        left:30rpx;
+        height:88rpx;
+        width:690rpx;
+    }
+
+    .form-title
+    {
+        font-size:16px;
+        color:#7F8389;
+        position:relative;
+        left:30rpx;
+        height:88rpx;
+        font-weight:600;
+        display:block;
+        line-height:88rpx;
+    }
+
+    .condition-area
+    {
+        position: relative;
+        height: 280rpx;
+        font-size: 16px;
+    }
+
+    .check-bar
+    {
+        position: relative;
+        height: 88rpx;
+        background-color: white;
+        margin-bottom: 2rpx;
+    }
+
+    .check-left-text
+    {
+        position: absolute;
+        left: 30rpx;
+        color: #7F8389;
+        height: 88rpx;
+        line-height: 88rpx;
+    }
+
+    .right-icon {
+        position: absolute;
+        top: 25rpx;
+        right: 54rpx;
+        width: 45rpx;
+        height: 45rpx;
+    }
+
+    .ct-button
+    {
+        margin-top: 88rpx;
+        width: 690rpx;
+        background-color: #409EFF;
+        color: white;
+        height: 94rpx;
+        line-height: 94rpx;
+    }
+
+</style>
+<template>
+    <view >
+        <view class="form-item">
+            <text class="form-title">调用链接</text>
+            <view class="input-container">
+                <input placeholder="http开头的网址" class="form-input" bindinput="onURLInput"  placeholder-style="color:#B2B2B2" value="{{url}}"/>
+            </view>
+        </view>
+        <view class="form-item">
+            <text class="form-title">校验Token</text>
+            <view class="input-container">
+                <input placeholder="校验用token，可选" class="form-input" bindinput="onTokenInput"  placeholder-style="color:#B2B2B2" value="{{token}}"/>
+            </view>
+        </view>
+
+        <view class="condition-area">
+            <text class="form-title">触发时机</text>
+            <view class="check-bar" @tap="onStartCommit">
+                <text class="check-left-text">提交前</text>
+                <image src="../images/check{{startCommit ? 1 : 0}}.png" class="right-icon"/>
+            </view>
+            <view class="check-bar" @tap="onPostCommit">
+                <text class="check-left-text">提交后</text>
+                <image src="../images/check{{postCommit ? 1 : 0}}.png" class="right-icon"/>
+            </view>
+        </view>
+
+        <button @tap="saveChange" class="ct-button">保存</button>
+
+    </view>
+</template>
+
+<script>
+    import wepy from 'wepy'
+    import {tools} from '../common/tools'
+
+    export default class Index extends wepy.page
+    {
+        config = {
+            navigationBarTitleText: '编辑钩子',
+        };
+
+        data = {
+            token: '',
+            url:'',
+            pid:'',
+            hid: '',
+            startCommit:false,
+            postCommit:true,
+        }
+
+        methods = {
+            onStartCommit()
+            {
+                this.startCommit = !this.startCommit
+            },
+
+            onPostCommit()
+            {
+                this.postCommit = !this.postCommit
+            },
+
+            saveChange()
+            {
+                let events = []
+                if(this.startCommit)
+                {
+                    events.push('start-commit')
+                }
+                if(this.postCommit)
+                {
+                    events.push('post-commit')
+                }
+                wepy.request({
+                    url: '/api/saveHook',
+                    method: 'POST',
+                    data: {
+                        projectId: this.pid,
+                        token: this.token,
+                        url: this.url,
+                        events: events.join(";"),
+                        hid: this.hid,
+                    }
+                }).then(res =>
+                {
+                    if(res.data.success !== false)
+                    {
+                        this.$parent.globalData.refreshHooks = true;
+                        wepy.navigateBack()
+                        wepy.showToast({
+                            title: '保存成功',
+                            icon: 'none',
+                            duration: 2000
+                        })
+                    }
+                })
+            },
+        }
+
+
+        onURLInput(e)
+        {
+            this.url = e.detail.value
+        }
+
+        onTokenInput(e)
+        {
+            this.token = e.detail.value
+        }
+
+        onLoad()
+        {
+            this.pid = this.$parent.globalData.currentProjectData._id
+            if(this.$parent.globalData.hookInfo)
+            {
+                this.hid = this.$parent.globalData.hookInfo._id
+                this.token = this.$parent.globalData.hookInfo.token
+                this.url = this.$parent.globalData.hookInfo.url
+                this.startCommit = this.$parent.globalData.hookInfo.events.indexOf('start-commit') !== -1
+                this.postCommit = this.$parent.globalData.hookInfo.events.indexOf('post-commit') !== -1
+                this.$parent.globalData.hookInfo = null
+            }
+        }
+    }
+</script>

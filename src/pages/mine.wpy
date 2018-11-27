@@ -1,0 +1,436 @@
+<style lang="scss">
+
+    .header-container
+    {
+        background-color: #409EFF;
+        width:100%;
+        height: 160rpx;
+        position: relative;
+    }
+
+    .head-img
+    {
+        width:100rpx;
+        height:100rpx;
+        border-radius:50%;
+        position: relative;
+        left:326rpx;
+    }
+
+    .nickname
+    {
+        display: block;
+        position: relative;
+        color: white;
+        text-align:center;
+        font-size: 14px;
+        font-weight:600;
+    }
+
+    .edit_icon
+    {
+        position:relative;
+        width:35rpx;
+        height:26rpx;
+        left:5rpx;
+        top: 2rpx;
+    }
+
+    .bottom-container
+    {
+        display: block;
+        background-color: #F2F6FC;
+        width:100%;
+        height:100%;
+        position: relative;
+    }
+
+    .buy-container
+    {
+        font-size: 14px;
+        color: #7F8389;
+        margin-top: 12rpx;
+        height: 180rpx;
+        background-color: white;
+        position: relative;
+
+    }
+
+    .user-type
+    {
+        position: absolute;
+        left: 35rpx;
+        top:20rpx;
+    }
+
+    .expire-time
+    {
+        position: absolute;
+        right:30rpx;
+        top:20rpx;
+    }
+
+    .buy-button {
+        width: 690rpx;
+        position: absolute;
+        bottom: 20rpx;
+        left: 30rpx;
+        background-color: #409EFF;
+        color: white;
+        height: 80rpx;
+        line-height: 80rpx;
+    }
+
+    .upgrade-button {
+        width: 328rpx;
+        position: absolute;
+        bottom: 20rpx;
+        left: 30rpx;
+        background-color: #E64340;
+        color: white;
+        height: 80rpx;
+        line-height: 80rpx;
+    }
+
+    .extend-button {
+        width: 328rpx;
+        position: absolute;
+        bottom: 20rpx;
+        right: 30rpx;
+        background-color: #409EFF;
+        color: white;
+        height: 80rpx;
+        line-height: 80rpx;
+    }
+
+
+    .menu-group
+    {
+        font-size: 16px;
+        color: #7F8389;
+        position: relative;
+        margin-top: 12rpx;
+    }
+
+    .list_menu
+    {
+        position: relative;
+        height: 88rpx;
+        vertical-align:middle;
+        line-height: 88rpx;
+        margin-bottom: 2rpx;
+        background-color: white;
+    }
+
+    .left_icon
+    {
+        position:absolute;
+        width:43rpx;
+        height:43rpx;
+        left:30rpx;
+        top:24rpx;
+    }
+
+    .left_text
+    {
+        position: absolute;
+        left:87rpx;
+    }
+
+    .right_text
+    {
+        position: absolute;
+        right:70rpx;
+        color: #BBBBBB;
+    }
+
+    .right_icon
+    {
+        position: absolute;
+        right:30rpx;
+        width: 37rpx;
+        height: 35rpx;
+        top:30rpx;
+    }
+
+    .list-button
+    {
+        background-color:aqua;
+        width:100%;
+        height:100%;
+        position:absolute;
+        opacity:0;
+    }
+
+
+</style>
+<template>
+    <view>
+        <view class="header-container">
+            <image class="head-img" src="{{head}}" @tap="changeHead"/>
+            <navigator url="updateUserInfo?title=名字&key=name&value={{name}}" hover-class="none">
+                <view class="nickname" >
+                    {{name}}
+                    <image class="edit_icon" src="../images/edit.png"/>
+                </view>
+            </navigator>
+        </view>
+        <view class="bottom-container">
+            <view class="buy-container">
+                <text class="user-type">{{accountTypeName}}：{{reposSize}} / {{reposMaxSize}}</text>
+                <text class="expire-time">{{expireAt}}</text>
+                <navigator wx:if="{{isFreeUser}}" url="buy" hover-class="none">
+                    <button class="buy-button">购买空间</button>
+                </navigator>
+                <navigator wx:if="{{!isFreeUser}}" url="upgrade" hover-class="none">
+                    <button class="upgrade-button">升级</button>
+                </navigator>
+                <navigator wx:if="{{!isFreeUser}}" url="extendTime" hover-class="none">
+                    <button class="extend-button">续费</button>
+                </navigator>
+            </view>
+
+            <view class="menu-group">
+                <view class="list_menu">
+                    <image class="head-img" src="../images/mine-username.png" class="left_icon"/>
+                    <text class="left_text">用户名</text>
+                    <text class="right_text">{{username}}</text>
+                </view>
+                <navigator url="updateUserInfo?title=电子邮箱&key=email&value={{email}}" hover-class="none">
+                    <view class="list_menu">
+                        <image class="head-img" src="../images/mine-email.png" class="left_icon"/>
+                        <text class="left_text">电子邮箱</text>
+                        <text class="right_text">{{email}}</text>
+                        <image class="right_icon" src="../images/arrowRight.png"/>
+                    </view>
+                </navigator>
+                <navigator url="updateUserInfo?title=手机号码&key=mobile&value={{mobile}}" hover-class="none">
+                    <view class="list_menu">
+                        <image class="head-img" src="../images/mine-mobile.png" class="left_icon"/>
+                        <text class="left_text">手机号码</text>
+                        <text class="right_text">{{mobile}}</text>
+                        <image class="right_icon" src="../images/arrowRight.png"/>
+                    </view>
+                </navigator>
+            </view>
+            <view class="menu-group">
+                <navigator url="changePassword" hover-class="none">
+                    <view class="list_menu">
+                        <image class="head-img" src="../images/mine-lock.png" class="left_icon"/>
+                        <text class="left_text">修改密码</text>
+                        <!--<text class="right_text"></text>-->
+                        <image class="right_icon" src="../images/arrowRight.png"/>
+                    </view>
+                </navigator>
+                <navigator url="forget?username={{username}}" hover-class="none">
+                    <view class="list_menu">
+                        <image class="head-img" src="../images/mine-forget.png" class="left_icon"/>
+                        <text class="left_text">忘记密码</text>
+                        <!--<text class="right_text"></text>-->
+                        <image class="right_icon" src="../images/arrowRight.png"/>
+                    </view>
+                </navigator>
+            </view>
+            <!--<view class="menu-group">-->
+                <!--<view class="list_menu">-->
+                    <!--<image class="head-img" src="../images/mine-notification.png" class="left_icon"/>-->
+                    <!--<text class="left_text">消息通知</text>-->
+                    <!--&lt;!&ndash;<text class="right_text"></text>&ndash;&gt;-->
+                    <!--<image class="right_icon" src="../images/arrowRight.png"/>-->
+                <!--</view>-->
+            <!--</view>-->
+            <view class="menu-group">
+                <!--<navigator url="tutorial" hover-class="none">-->
+                    <!--<view class="list_menu">-->
+                        <!--<image class="head-img" src="../images/mine-book.png" class="left_icon"/>-->
+                        <!--<text class="left_text">SVN入门手册</text>-->
+                        <!--&lt;!&ndash;<text class="right_text"></text>&ndash;&gt;-->
+                        <!--<image class="right_icon" src="../images/arrowRight.png"/>-->
+                    <!--</view>-->
+                <!--</navigator>-->
+
+                <!--<view class="list_menu" @tap="contactWe">-->
+                    <!--<image class="head-img" src="../images/mine-service.png" class="left_icon"/>-->
+                    <!--<text class="left_text">邮件联系</text>-->
+                    <!--&lt;!&ndash;<text class="right_text"></text>&ndash;&gt;-->
+                    <!--<image class="right_icon" src="../images/arrowRight.png"/>-->
+                <!--</view>-->
+
+                <view class="list_menu">
+                    <button open-type="contact" session-from="{{username}}" class="list-button"></button>
+                    <image class="head-img" src="../images/mine-service.png" class="left_icon"/>
+                    <text class="left_text">联系客服</text>
+                    <!--<text class="right_text"></text>-->
+                    <image class="right_icon" src="../images/arrowRight.png"/>
+                </view>
+
+                <!--<view class="list_menu">-->
+                    <!--<button open-type="feedback" class="list-button"></button>-->
+                    <!--<image class="head-img" src="../images/mine-service.png" class="left_icon"/>-->
+                    <!--<text class="left_text">建议反馈</text>-->
+                    <!--&lt;!&ndash;<text class="right_text"></text>&ndash;&gt;-->
+                    <!--<image class="right_icon" src="../images/arrowRight.png"/>-->
+                <!--</view>-->
+            </view>
+        </view>
+    </view>
+</template>
+
+<script>
+    import wepy from 'wepy'
+    import {tools} from '../common/tools'
+
+    export default class Index extends wepy.page {
+        config = {
+            navigationBarTitleText: '我的',
+//            disableScroll: true,
+        };
+
+        data = {
+            name: '',
+            username: '',
+            email: '',
+            head: '',
+            mobile: '',
+            accountTypeName: '',
+            reposSize: 0,
+            reposMaxSize: 0,
+            expireAt: '',
+            cosFullPath:'',
+            isFreeUser:true,
+            cos:'',
+        }
+
+        getAccountTypeName(accountType)
+        {
+            if(accountType === 0)
+            {
+                return '免费用户'
+            }
+            else if(accountType >= 80)
+            {
+                return 'SVIP ' + (accountType - 80)
+            }
+            else
+            {
+                return 'VIP ' + accountType
+            }
+        }
+
+        getExpireTime(expireAt)
+        {
+            if(this.$parent.globalData.userInfo.accountType === 0)
+            {
+                return '免费使用'
+            }
+            else
+            {
+                return tools.formatDate(expireAt)
+            }
+        }
+
+        methods = {
+            async changeHead()
+            {
+                // let res = await wepy.chooseImage({
+                //     count: 1,
+                // })
+                // console.log(res)
+                // let path = res.tempFilePaths[0]
+                // var successCallBack = function (result)
+                // {
+                //     console.log("upload to cos ok:" + JSON.stringify(result));
+                //     // this.head = self.fileName;
+                // };
+                //
+                // var errorCallBack = function (result)
+                // {
+                //     console.log("upload to cos error:" + result);
+                // };
+                //
+                // var progressCallBack = function (curr)
+                // {
+                //     console.log('uploading... curr progress is ' + curr);
+                // };
+                // this.cosFullPath = '/head/' + this.username;
+                // console.log('file name:' + data.file.name);
+                // this.cos.uploadFile(successCallBack, errorCallBack, progressCallBack, tools.COS_BUCKET_NAME, this.cosFullPath, path, 0);
+            },
+            contactWe()
+            {
+                wepy.showModal({
+                    title: '提示',
+                    content: '使用中有什么问题或者建议请联系我们：gzyunke@qq.com'
+                })
+            }
+        }
+
+        // getCosSign(callback)
+        // {
+        //     wepy.request({
+        //         url: '/api/cosSignMore',
+        //         method: 'POST',
+        //         data: {
+        //             cosFullPath: this.cosFullPath,
+        //         }
+        //     }).then(res =>
+        //     {
+        //         if(res.data.success === false)
+        //             return
+        //
+        //         console.log('sign:' + res.data.sign);
+        //         callback(res.data.sign)
+        //     })
+        // }
+        //
+        // initCos()
+        // {
+        //     this.cos = new CosCloud({
+        //         appid: tools.COS_APPID,
+        //         bucket: tools.COS_BUCKET_NAME,
+        //         region: tools.COS_REGION,
+        //         getAppSign: this.getCosSign,
+        //     });
+        // }
+
+        onLoad()
+        {
+            // this.initCos()
+        }
+
+        onShow() {
+            // console.log(this.$parent.globalData.userInfo)
+            this.refreshData();
+        }
+
+        refreshData()
+        {
+            console.log('refresh data');
+            let userInfo = this.$parent.globalData.userInfo;
+            this.name = userInfo.name;
+            this.username = userInfo.username;
+            this.email = userInfo.email;
+            this.head = tools.imgFullPath(userInfo.head, 'head', 5, 100);
+            this.mobile = userInfo.mobile;
+            this.accountTypeName = this.getAccountTypeName(userInfo.accountType);
+            this.reposSize = tools.formateSize(userInfo.reposSize);
+            this.reposMaxSize = tools.formateSize(userInfo.reposMaxSize);
+            this.expireAt = this.getExpireTime(userInfo.expireAt);
+            this.accountType = userInfo.accountType;
+            this.isFreeUser = this.accountType === 0
+        }
+
+        onShareAppMessage(res)
+        {
+            if (res.from === 'button')
+            {
+                // 来自页面内转发按钮
+                console.log(res.target)
+            }
+            return {
+                title: 'SVNBucket，好用的SVN托管服务',
+                path: 'pages/launch'
+            }
+        }
+    }
+</script>

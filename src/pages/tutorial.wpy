@@ -1,0 +1,30 @@
+<style lang="scss">
+
+</style>
+<template>
+    <view>
+        <web-view src="https://segmentfault.com/a/1190000014245101"></web-view>
+    </view>
+</template>
+
+<script>
+    import wepy from 'wepy'
+
+    export default class Index extends wepy.page
+    {
+        config = {
+            navigationBarTitleText: '快速入门',
+        };
+
+        data = {
+        }
+
+        methods = {
+        }
+
+        onLoad()
+        {
+        }
+
+    }
+</script>

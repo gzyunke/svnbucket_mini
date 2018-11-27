@@ -1,0 +1,85 @@
+<style lang="scss">
+
+    .title-text
+    {
+        width: 100%;
+        display: block;
+        font-size: 30px;
+        text-align: center;
+        margin-top: 140rpx;
+        color: #595A5C;
+    }
+
+    .bind-old-button
+    {
+        color: white;
+        margin-top: 140rpx;
+        background-color: #409EFF;
+    }
+
+    .bind-new-button
+    {
+        color: #409EFF;
+        margin-top: 96rpx;
+        background-color: #CAE1F8;
+        border: 1px solid #68B0FA;
+    }
+
+    .ct-button {
+        width: 670rpx;
+        height: 96rpx;
+        line-height: 96rpx;
+        border-radius: 6px;
+    }
+
+</style>
+<template>
+    <view>
+        <text class="title-text">绑定SVNBucket帐号</text>
+        <button @tap="login" class="ct-button bind-old-button" >绑定已有帐号</button>
+        <button @tap="regist" class="ct-button bind-new-button" >绑定新帐号</button>
+    </view>
+</template>
+
+<script>
+    import wepy from 'wepy'
+
+    export default class Index extends wepy.page
+    {
+        config = {
+            navigationBarTitleText: '绑定账号',
+        };
+
+        methods = {
+            login()
+            {
+                console.log('goto login page')
+                this.$navigate('login')
+            },
+
+            regist()
+            {
+                console.log('goto regist page')
+                this.$navigate('regist')
+            }
+        }
+
+        onLoad()
+        {
+        }
+
+        onShareAppMessage(res)
+        {
+            if (res.from === 'button')
+            {
+                // 来自页面内转发按钮
+                console.log(res.target)
+            }
+            return {
+                title: 'SVNBucket，好用的SVN托管服务',
+                path: 'pages/launch'
+            }
+        }
+
+    }
+</script>

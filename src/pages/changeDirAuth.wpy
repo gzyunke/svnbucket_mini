@@ -1,0 +1,278 @@
+<style lang="scss">
+
+    .auth-container
+    {
+        position: relative;
+        margin-bottom: 30rpx;
+    }
+
+    .top-bar
+    {
+        position: relative;
+        height: 88rpx;
+        font-weight:600;
+        text-align: center;
+        line-height: 98rpx;
+        border-bottom: #E5E5E5 1px solid;
+        margin-bottom: 30rpx;
+    }
+
+    .top-bar-left-text
+    {
+        position: absolute;
+        font-size: 16px;
+        color:#7F8389;
+        left:30rpx;
+    }
+
+    .top-bar-right-text
+    {
+        position: absolute;
+        font-size: 16px;
+        color:#409EFF;
+        right:30rpx;
+    }
+
+    .input-container
+    {
+        font-size: 16px;
+        background-color: white;
+        height: 88rpx;
+        width:100%;
+        position: relative;
+        margin-bottom: 4rpx;
+    }
+
+    .form-input
+    {
+        position: absolute;
+        left:30rpx;
+        height:88rpx;
+        width:500rpx;
+    }
+
+    .explore-area
+    {
+        position: absolute;
+        right: 0rpx;
+        top: 11rpx;
+        width: 160rpx;
+        height: 68rpx;
+        border-left: #EFEFF4 1px solid;
+    }
+
+    .explore-text
+    {
+        color:#409EFF;
+        position:absolute;
+        right:36rpx;
+        text-align:center;
+        top:13rpx;
+    }
+
+    .row-menu
+    {
+        position: relative;
+        height:88rpx;
+        background-color: white;
+        text-align: center;
+        line-height: 88rpx;
+        font-size: 16px;
+        color: #7F8389;
+        margin-bottom: 2rpx;
+    }
+
+    .title-text
+    {
+        position: absolute;
+        left: 30rpx;
+    }
+
+    .right-icon
+    {
+        position: absolute;
+        right: 50rpx;
+        top: 21rpx;
+    }
+
+    .ct-button
+    {
+        margin-top: 88rpx;
+        width: 690rpx;
+        background-color: #409EFF;
+        color: white;
+        height: 94rpx;
+        line-height: 94rpx;
+    }
+
+    .add-button
+    {
+        background-color: #CAE1F8;
+        border: 1px solid #68B0FA;
+        margin-top: 88rpx;
+        width: 690rpx;
+        color: #409EFF;
+        height: 94rpx;
+        line-height: 94rpx;
+    }
+
+</style>
+<template>
+    <view >
+        <view class="top-bar">
+            <text class="top-bar-left-text">目录权限（{{permissions.length}}）</text>
+            <text class="top-bar-right-text" @tap="addDir">添加目录</text>
+        </view>
+        <repeat for="{{permissions}}" key="index" index="index" item="data">
+            <view class="auth-container">
+                <view class="input-container">
+                    <input placeholder="以/开头，非/结尾" class="form-input" bindinput="onInput" data-index="{{index}}" placeholder-style="color:#B2B2B2" value="{{data.path}}"/>
+                    <view class="explore-area" @tap="goExploreDir" data-index="{{index}}">
+                        <text class="explore-text">浏览...</text>
+                    </view>
+                </view>
+
+                <view class="row-menu" @tap="selectPermission" data-index="{{index}}" data-auth="rw">
+                    <text class="title-text">读写</text>
+                    <icon wx:if="{{data.permission == 'rw'}}" type="success_no_circle" size="20" class="right-icon"/>
+                </view>
+
+                <view class="row-menu" @tap="selectPermission" data-index="{{index}}" data-auth="r">
+                    <text class="title-text">只读</text>
+                    <icon wx:if="{{data.permission == 'r'}}" type="success_no_circle" size="20" class="right-icon"/>
+                </view>
+                <view class="row-menu" @tap="selectPermission" data-index="{{index}}"  data-auth="">
+                    <text class="title-text">无权限</text>
+                    <icon wx:if="{{data.permission == ''}}" type="success_no_circle" size="20" class="right-icon"/>
+                </view>
+            </view>
+        </repeat>
+
+        <!--<button wx:if="{{permissions.length < 3}}" @tap="addDir" class="add-button">添加目录</button>-->
+        <button @tap="save" class="ct-button">保存修改</button>
+
+    </view>
+</template>
+
+<script>
+    import wepy from 'wepy'
+    import {tools} from '../common/tools'
+
+    export default class Index extends wepy.page
+    {
+        config = {
+            navigationBarTitleText: '目录权限',
+        };
+
+        data = {
+            pid: '',
+            datas:[],
+            permissions:[],
+            uids:[],
+        }
+
+        methods = {
+            addDir()
+            {
+                if(this.permissions.length >= 10)
+                {
+                    wepy.showToast({
+                        title: '最多添加10个目录',
+                        icon: 'none',
+                        duration: 2000
+                    })
+                    return
+                }
+                this.permissions.push({path:'', 'permission':'rw'})
+            },
+            selectPermission(e)
+            {
+                let index = e.currentTarget.dataset.index;
+                let auth = e.currentTarget.dataset.auth;
+                this.permissions[index]['permission'] = auth
+            },
+            goExploreDir(e)
+            {
+                this.$parent.globalData.selectedPath = null;
+                this.$parent.globalData.explorerIndex = e.currentTarget.dataset.index
+                wepy.navigateTo({
+                    url: 'dirExplorer'
+                })
+            },
+            save()
+            {
+                let isComplete = false
+                let permissionDict = {}
+                this.permissions.forEach(function (item)
+                {
+                    if (item.path.length > 0)
+                    {
+                        permissionDict[item.path] = item.permission
+                        isComplete = true
+                    }
+                })
+
+                if (!isComplete)
+                {
+                    wepy.showToast({
+                        title: '至少填写一个路径',
+                        icon: 'none',
+                        duration: 2000
+                    })
+                    return
+                }
+
+                wepy.request({
+                    url: '/api/savePermissions',
+                    method: 'POST',
+                    data: {
+                        projectId: this.pid,
+                        userids: this.uids.join(';'),
+                        permissions: JSON.stringify(permissionDict),
+                    }
+                }).then(res =>
+                {
+                    if (res.data.success === false)
+                        return
+                    this.$parent.globalData.refreshMembers = true;
+                    wepy.navigateBack({delta:this.$parent.globalData.isFromNew ? 2 : 1})
+                    this.$parent.globalData.isFromNew = false
+                    wepy.showToast({
+                        title: '保存成功',
+                        icon: 'none',
+                        duration: 2000
+                    })
+                })
+            }
+        }
+
+
+        onLoad()
+        {
+            this.permissions = []
+            this.$parent.globalData.selectedPath = null
+            this.pid = this.$parent.globalData.currentProjectData._id
+            let permissions = this.$parent.globalData.permissions
+            this.uids = this.$parent.globalData.selectedUids
+            for(let key in permissions)
+            {
+                this.permissions.push({path:key, permission: permissions[key]})
+            }
+        }
+
+        onShow()
+        {
+            if(this.$parent.globalData.selectedPath)
+            {
+                this.permissions[this.$parent.globalData.explorerIndex]['path'] = this.$parent.globalData.selectedPath
+            }
+        }
+
+        onInput(e)
+        {
+            let index = e.currentTarget.dataset.index
+            this.permissions[index]['path'] = e.detail.value
+        }
+
+    }
+</script>

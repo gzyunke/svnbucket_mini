@@ -1,0 +1,291 @@
+<style lang="scss">
+
+    .bottom-container
+    {
+        display: block;
+        background-color: #F2F6FC;
+        width:100%;
+        height:100%;
+        position: relative;
+    }
+
+    .menu-group
+    {
+        font-size: 16px;
+        color: #7F8389;
+        position: relative;
+        margin-top: 10rpx;
+    }
+
+    .list_menu
+    {
+        position: relative;
+        height: 122rpx;
+        vertical-align:middle;
+        line-height: 122rpx;
+        margin-bottom: 2rpx;
+        background-color: white;
+    }
+
+    .back_menu
+    {
+        margin: 20rpx 0 20rpx 0;
+    }
+
+    .left_icon
+    {
+        position:absolute;
+        width:82rpx;
+        height:82rpx;
+        border-radius: 50%;
+        left:30rpx;
+        top:21rpx;
+    }
+
+    .left-top-text
+    {
+        position: absolute;
+        left:142rpx;
+        height: 50rpx;
+        top: -17rpx;
+    }
+
+    .left-bottom-text
+    {
+        position: absolute;
+        left:142rpx;
+        top: 24rpx;
+        height: 50rpx;
+        color: #A4A4A4;
+        font-size: 14px;
+    }
+
+    .right_text
+    {
+        position: absolute;
+        right:73rpx;
+        font-size: 14px;
+        color: #BBBBBB;
+    }
+
+    .top-bar
+    {
+        position: relative;
+        height: 88rpx;
+        font-weight:600;
+        text-align: center;
+        line-height: 98rpx;
+    }
+
+    .member-text
+    {
+        position: absolute;
+        font-size: 16px;
+        color:#7F8389;
+        left:30rpx;
+    }
+
+    .add-user-text
+    {
+        position: absolute;
+        font-size: 16px;
+        color:#409EFF;
+        right:30rpx;
+    }
+
+    .right-icon {
+        position: absolute;
+        top: 42rpx;
+        right: 54rpx;
+        width: 45rpx;
+        height: 45rpx;
+    }
+
+    .inputContainer
+    {
+        position: relative;
+        height: 80rpx;
+        width: 690rpx;
+        left: 28rpx;
+        margin-top: 28rpx;
+        border-radius: 100px;
+        background-color: white;
+    }
+
+    .search-icon
+    {
+        position:absolute;
+        left:25rpx;
+        top:24rpx;
+    }
+
+    .form-input
+    {
+        position:absolute;
+        left:80rpx;
+        height:80rpx;
+        width:580rpx;
+        font-size:14px;
+    }
+
+</style>
+<template>
+    <view>
+        <view class="inputContainer">
+            <icon type="search" size="20" class="search-icon" color="#B2B2B2"/>
+            <input placeholder="输入对方的SVNBucket帐号名、邮箱进行搜索" class="form-input" bindinput="onInput"
+                   placeholder-style="color:#B2B2B2"
+                   confirm-type="search"
+                   bindconfirm="onPullDownRefresh"/>
+
+        </view>
+
+        <view class="top-bar">
+            <text class="member-text">已选（{{totalMember}}）</text>
+            <text class="add-user-text" @tap="next">下一步</text>
+        </view>
+
+        <view class="bottom-container">
+            <view class="menu-group">
+                <repeat for="{{datas}}" key="index" index="index" item="user">
+                    <view class="list_menu" @tap="onSelectUser" data-uid="{{user._id}}">
+                        <image src="{{user.head}}" class="left_icon"/>
+                        <view class="left-top-text">{{user.name}}</view>
+                        <view class="left-bottom-text">{{user.username}}</view>
+                        <image src="../images/check{{selectedDict[user._id]}}.png" class="right-icon"/>
+                    </view>
+                </repeat>
+            </view>
+        </view>
+    </view>
+</template>
+
+<script>
+    import wepy from 'wepy'
+    import {tools} from '../common/tools'
+
+    export default class Index extends wepy.page
+    {
+        config = {
+            navigationBarTitleText: '添加成员',
+            enablePullDownRefresh: true,
+        };
+
+
+        data = {
+            pid:'',
+            page: 1,
+            pageSize: 20,
+            hasMore: true,
+            datas: [],
+            selectedUids:[],
+            selectedDict:{},
+            keyword:'',
+            totalMember: 0,
+            resetData: false,
+        }
+
+        methods = {
+            onSelectUser(e)
+            {
+                let uid = e.currentTarget.dataset.uid
+                let index = this.selectedUids.indexOf(uid)
+                if(index >= 0)
+                {
+                    this.selectedUids.splice(index, 1)
+                    this.selectedDict[uid] = 0
+                }
+                else
+                {
+                    this.selectedUids.push(uid)
+                    this.selectedDict[uid] = 1
+                }
+                this.totalMember = this.selectedUids.length
+                console.log(this.selectedUids)
+            },
+            next()
+            {
+                if(this.selectedUids.length <= 0)
+                {
+                    wepy.showToast({
+                        title: '请至少选择一位成员',
+                        icon: 'none',
+                        duration: 2000
+                    })
+                    return
+                }
+                this.$parent.globalData.permissions = {'/':'rw'}
+                this.$parent.globalData.selectedUids = this.selectedUids
+                this.$parent.globalData.isFromNew = true
+                wepy.navigateTo({
+                    url: 'changeDirAuth'
+                })
+            }
+        }
+
+        getDatas()
+        {
+            wepy.request({
+                url: '/api/searchUser',
+                method: 'POST',
+                data: {
+                    projectId: this.pid,
+                    keyword: this.keyword,
+                    page: this.page,
+                    pageSize: this.pageSize,
+                }
+            }).then(res =>
+            {
+                wepy.stopPullDownRefresh();
+                if(res.data.success === false)
+                    return
+
+                if(this.resetData)
+                {
+                    this.datas = [];
+                    this.resetData = false;
+                }
+
+                res.data.list.forEach((value, index, array) => {
+                    value.head = tools.imgFullPath(value.head, 'head', 5, 100);
+                    this.datas.push(value)
+                    if(!this.selectedDict[value._id])
+                    {
+                        this.selectedDict[value._id] = 0
+                    }
+                });
+                this.hasMore = res.data.list.length >= this.pageSize;
+                this.$apply();
+            })
+        }
+
+        onInput(e)
+        {
+            this.keyword = e.detail.value
+        }
+
+        onPullDownRefresh()
+        {
+            this.page = 1;
+            this.resetData = true
+            this.getDatas();
+        }
+
+        onReachBottom()
+        {
+            console.log('onReachBottom')
+            if(this.hasMore)
+            {
+                this.page += 1;
+                this.getDatas();
+            }
+        }
+
+        onLoad()
+        {
+            this.pid = this.$parent.globalData.currentProjectData._id
+            this.getDatas()
+        }
+
+    }
+</script>

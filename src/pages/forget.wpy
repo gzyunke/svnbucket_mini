@@ -1,0 +1,107 @@
+<style lang="scss">
+    .input-container
+    {
+        margin-top: 96rpx;
+        font-size: 16px;
+        background-color: white;
+        height: 96rpx;
+        position: relative;
+    }
+
+    .form-input
+    {
+        position: absolute;
+        left:30rpx;
+        height:96rpx;
+        width:690rpx;
+
+    }
+
+    .ct-button
+    {
+        margin-top: 35rpx;
+        width: 690rpx;
+        background-color: #409EFF;
+        color: white;
+        height: 94rpx;
+        line-height: 94rpx;
+    }
+
+    .tip-text
+    {
+        margin-top: 50rpx;
+        font-size: 12px;
+        color: #B2B2B2;
+        text-align: center;
+        width: 100%;
+        display: block;
+    }
+
+</style>
+<template>
+    <view>
+        <view class="input-container">
+            <input placeholder="请输入用户名或邮箱" class="form-input" value="{{username}}" bindinput="onInput"  placeholder-style="color:#B2B2B2" focus="{{true}}"/>
+        </view>
+        <text class="tip-text">重置有问题？发邮件致 gzyunke@qq.com 寻求帮助</text>
+        <button @tap="onConfirm" class="ct-button">发送重置邮件</button>
+    </view>
+</template>
+
+<script>
+    import wepy from 'wepy'
+
+    export default class Index extends wepy.page
+    {
+        config = {
+            navigationBarTitleText: '忘记密码',
+        };
+
+        data = {
+            username:''
+        }
+
+        methods = {
+            onConfirm()
+            {
+                if(!this.username)
+                {
+                    wepy.showToast({
+                        title: '请填写完整',
+                        icon: 'none',
+                        duration: 2000
+                    })
+                    return
+                }
+                wepy.request({
+                    url: '/api/sendResetPasswordMail',
+                    method: 'POST',
+                    data: {
+                        username: this.username
+                    }
+                }).then(res =>
+                {
+                    if(res.data.success !== false)
+                    {
+                        wepy.showModal({
+                            title: '提示',
+                            content: res.data.msg,
+                        })
+                    }
+                })
+            },
+        }
+
+        onInput(e)
+        {
+            this.username = e.detail.value
+        }
+
+        onLoad(options)
+        {
+            if(options.username)
+                this.username = options.username
+        }
+
+    }
+</script>

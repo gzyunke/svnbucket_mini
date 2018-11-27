@@ -1,0 +1,214 @@
+<style lang="scss">
+
+    .timeline-item {
+        position: relative;
+        padding: 22rpx 0 0 30rpx;
+        margin-bottom: 2rpx;
+        font-size: 14px;
+        height: 120rpx;
+        background-color: white;
+    }
+
+    .head-img {
+        position:absolute;
+        width:63rpx;
+        height:63rpx;
+        top:35rpx;
+        left:22rpx;
+        border-radius:50%;
+    }
+
+    .event-desc {
+        position: absolute;
+        left: 98rpx;
+        top: 29rpx;
+        color:#7F8389;
+        width: 504rpx;
+        overflow: hidden;
+        text-overflow:ellipsis;
+        white-space: nowrap;
+    }
+
+    .line2-text {
+        position: absolute;
+        left: 98rpx;
+        top: 80rpx;
+        color: #a4a4a4;
+        width: 527rpx;
+        overflow: hidden;
+        text-overflow:ellipsis;
+        white-space: nowrap;
+    }
+
+    .time-text {
+        position: absolute;
+        right: 30rpx;
+        top: 33rpx;
+        color: #BBBBBB;
+        font-size: 12px;
+    }
+
+    .no-desc
+    {
+        font-style:italic;
+    }
+
+    .blue-text {
+        color: #409EFF;
+    }
+
+    .no-logs
+    {
+        position:relative;
+        color:#a4a4a4;
+        width:100%;
+        top:47rpx;
+        display: block;
+        text-align: center;
+        font-style:italic;
+    }
+
+    .ver-text {
+        position:absolute;
+        right:61rpx;
+        top:88rpx;
+        color:#BBBBBB;
+        font-size:12px;
+    }
+
+    .right_icon
+    {
+        position: absolute;
+        right:30rpx;
+        width: 37rpx;
+        height: 35rpx;
+        top:86rpx;
+    }
+
+</style>
+<template>
+    <view>
+        <text wx:if="{{datas.length <= 0}}" class="no-logs">
+            暂无项目动态
+        </text>
+        <repeat for="{{datas}}" key="index" index="index" item="item">
+            <view hover-class="none" class="timeline-item" @tap="goCommitDetail" data-info="{{item}}">
+                <image class="head-img" src="{{item.head}}"/>
+                <view class="event-desc">
+                    <span class="blue-text">{{item.name}}</span>
+                    <span> 提交代码到 </span>
+                    <span class="blue-text">{{item.projectName}}</span>
+                </view>
+                <view wx:if="{{item.msg.length <= 0}}" class="line2-text no-desc">
+                    没有提交描述
+                </view>
+                <view wx:if="{{item.msg.length > 0}}" class="line2-text">
+                    {{item.msg}}
+                </view>
+                <view class="time-text">{{item.time}}</view>
+                <text class="ver-text">r{{item.revision}}</text>
+                <image class="right_icon" src="../images/arrowRight.png"/>
+            </view>
+        </repeat>
+    </view>
+</template>
+
+<script>
+    import wepy from 'wepy'
+    import {tools} from '../common/tools'
+
+    export default class Index extends wepy.page
+    {
+        config = {
+            navigationBarTitleText: '动态',
+            enablePullDownRefresh: true,
+        };
+
+        data = {
+            page: 1,
+            pageSize: 20,
+            hasMore: true,
+            datas: [],
+            resetData: false,
+        }
+
+        methods = {
+            goCommitDetail(e)
+            {
+                this.$parent.globalData.currentLogInfo = e.currentTarget.dataset.info
+                // console.log(this.$parent.globalData.currentLogInfo)
+                wepy.navigateTo({
+                    url: 'commitLogDetail'
+                })
+            }
+        }
+
+        onLoad()
+        {
+            this.getDatas();
+        }
+
+        getDatas()
+        {
+            wepy.request({
+                url: '/api/timeline',
+                method: 'POST',
+                data: {
+                    page: this.page,
+                    pageSize: this.pageSize,
+                }
+            }).then(res =>
+            {
+                wepy.stopPullDownRefresh();
+                if (res.data.success === false)
+                    return
+
+                if(this.resetData)
+                {
+                    this.datas = [];
+                    this.resetData = false;
+                }
+                res.data.list.forEach((value, index, array) => {
+                    value.time = tools.formatDateBefore(value.time)
+                    value.head = tools.imgFullPath(value.head ? value.head : 'fang.jpg', 'head', 5, 100);
+                    this.datas.push(value)
+                });
+
+                this.hasMore = res.data.list.length >= this.pageSize;
+
+                this.totalCount = res.data.totalCount;
+                this.$apply();
+            })
+        }
+
+        onPullDownRefresh()
+        {
+            this.page = 1;
+            this.resetData = true
+            this.getDatas();
+        }
+
+        onReachBottom()
+        {
+            console.log('onReachBottom')
+            if(this.hasMore)
+            {
+                this.page += 1;
+                this.getDatas();
+            }
+        }
+
+        onShareAppMessage(res)
+        {
+            if (res.from === 'button')
+            {
+                // 来自页面内转发按钮
+                console.log(res.target)
+            }
+            return {
+                title: 'SVNBucket，好用的SVN托管服务',
+                path: 'pages/launch'
+            }
+        }
+    }
+</script>

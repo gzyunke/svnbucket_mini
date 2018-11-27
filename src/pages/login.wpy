@@ -1,0 +1,237 @@
+<style lang="scss">
+
+    .title-img
+    {
+        display: block;
+        width: 584rpx;
+        height: 110rpx;
+        text-align: center;
+        margin-left: 80rpx;
+        padding-top:35rpx
+    }
+
+    .form-container
+    {
+        margin-top: 37rpx;
+        font-size: 16px;
+        background-color: white;
+        height: 240rpx;
+        border-top: 1px solid #E5E5E5;
+        border-bottom: 1px solid #E5E5E5;
+    }
+
+    .form-item
+    {
+        position: relative;
+        height: 123rpx;
+    }
+
+    .split-line
+    {
+        border: 1rpx solid #f4f4f9;
+        position:absolute;
+        top:117rpx;
+        left:32rpx;
+        width:718rpx;
+    }
+
+    .form-icon
+    {
+        position:absolute;
+        left:30rpx;
+        top:41rpx;
+    }
+
+    .mine-icon
+    {
+        width:32rpx;
+        height:38rpx;
+    }
+
+    .email-icon
+    {
+        width:34rpx;
+        height:27rpx;
+        top:48rpx;
+        left:32rpx;
+    }
+
+    .password-icon
+    {
+        width:32rpx;
+        height:36rpx;
+    }
+
+    .form-input
+    {
+        position: absolute;
+        top: 21rpx;
+        left: 88rpx;
+        height: 80rpx;
+        width: 632rpx;
+    }
+
+    .ct-button
+    {
+        margin-top: 116rpx;
+        width: 670rpx;
+        background-color: #409EFF;
+        color: white;
+        height: 94rpx;
+        line-height: 94rpx;
+    }
+
+    .forget-text
+    {
+        position: absolute;
+        right: 30rpx;
+        font-size: 14px;
+        color: #7F8389;
+    }
+
+    .to-login-text
+    {
+        margin-top: 41rpx;
+        font-size: 14px;
+        color: #7F8389;
+        text-align: center;
+    }
+
+    .blue-text {
+        color: #409EFF;
+    }
+
+    .link
+    {
+        position: relative;
+        margin-top: 32rpx;
+    }
+
+    .placeholder-style
+    {
+        color: #B2B2B2;
+    }
+
+</style>
+<template>
+    <view>
+        <image class="title-img" src="../images/SVNBucket@2x.png"/>
+        <view class="form-container">
+            <view class="form-item">
+                <image class="form-icon mine-icon" src="../images/mine3x.png"/>
+                <input placeholder="SVN用户名（不是邮箱）" class="form-input" bindinput="onUsernameInput"  placeholder-style="color:#B2B2B2"/>
+                <view class="split-line"></view>
+            </view>
+            <view class="form-item">
+                <image class="form-icon password-icon" src="../images/lock3x.png"/>
+                <input password placeholder="SVN密码" class="form-input" bindinput="onPasswordInput" placeholder-style="color:#B2B2B2"/>
+            </view>
+        </view>
+
+        <navigator url="forget" hover-class="none" class="link">
+            <view class="forget-text">
+                <text class="blue-text">忘记密码</text>
+            </view>
+        </navigator>
+
+        <button @tap="login" class="ct-button">登录</button>
+
+        <navigator url="regist" hover-class="none">
+            <view class="to-login-text">
+                <text>还没帐号？</text>
+                <text class="blue-text">注册帐号</text>
+            </view>
+        </navigator>
+    </view>
+</template>
+
+<script>
+    import wepy from 'wepy'
+
+    export default class Index extends wepy.page
+    {
+        config = {
+            navigationBarTitleText: '登陆',
+        };
+
+
+        data = {
+            username: '',
+            password: '',
+            name: '',
+            head: '',
+        }
+
+        methods = {
+            login()
+            {
+                if(!this.username || !this.password)
+                {
+                    wepy.showToast({
+                        title: '请填写完整',
+                        icon: 'none',
+                        duration: 2000
+                    })
+                    return
+                }
+                wepy.request({
+                    url: '/api/login',
+                    method: 'POST',
+                    data: {
+                        username: this.username,
+                        password: this.password,
+                        head: this.head,
+                        ref: 'wxmini',
+                        bindToken: this.$parent.globalData.bindToken,
+                    }
+                }).then(res =>
+                {
+                    if(res.data.success !== false)
+                    {
+                        this.$parent.globalData.token = res.data.token;
+                        console.log(res.data)
+                        this.$switch('projects');
+                    }
+                })
+            },
+
+        }
+
+        onUsernameInput(e)
+        {
+            this.username = e.detail.value
+        }
+
+        onPasswordInput(e)
+        {
+            this.password = e.detail.value
+        }
+
+        onLoad()
+        {
+            this.getUsrInfo();
+        }
+
+        async getUsrInfo()
+        {
+            let response = await wepy.getUserInfo();
+            console.log(response.userInfo)
+            this.name = response.userInfo.nickName
+            this.head = response.userInfo.avatarUrl
+        }
+
+        onShareAppMessage(res)
+        {
+            if (res.from === 'button')
+            {
+                // 来自页面内转发按钮
+                console.log(res.target)
+            }
+            return {
+                title: 'SVNBucket，好用的SVN托管服务',
+                path: 'pages/launch'
+            }
+        }
+
+    }
+</script>

@@ -1,0 +1,192 @@
+<style lang="scss">
+    .splash {
+        width: 350rpx;
+        height: 100vh;
+        max-height: 100%;
+    }
+
+    .title {
+        display: inline-block;
+        position: absolute;
+        top: 14%;
+        width: 100%;
+        line-height: 50rpx;
+        text-align: center;
+        color: #FFFFFF;
+        font-size: 42px;
+        font-weight: 600;
+        text-shadow: 1px 1px gray;
+    }
+
+    .subtitle {
+        display: inline-block;
+        position: absolute;
+        top: 20%;
+        width: 100%;
+        text-align: center;
+        color: #FFFFFF;
+        font-size: 16px;
+        font-weight: 400;
+        text-shadow: 1px 1px gray;
+    }
+
+    .splash-bg {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+    }
+
+    .auth-button
+    {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        opacity: 0;
+    }
+
+    .tip-text
+    {
+        position:absolute;
+        width:100%;
+        height:100%;
+        color:white;
+        top:430rpx;
+        text-align:center;
+        font-size: 16px;
+    }
+</style>
+
+<template>
+    <view class="splash">
+        <image class="splash-bg" src="../images/splash.png" mode="aspectFill" />
+        <view>
+            <text class="title">SVNBucket</text>
+            <text class="subtitle">可能是最好用的 SVN 托管服务</text>
+        </view>
+        <view wx:if="{{showAuthButton}}" @tap="onTouch">
+            <view class="tip-text">点击继续</view>
+            <button wx:if="{{canIUse}}" open-type="getUserInfo" bindgetuserinfo="onGetUserInfo" class="auth-button">授权登录</button>
+        </view>
+    </view>
+</template>
+
+<script>
+    import wepy from 'wepy'
+
+    export default class Index extends wepy.page
+    {
+        config = {
+            navigationBarTitleText: '',
+        };
+
+        data = {
+            canIUse: wepy.canIUse('button.open-type.getUserInfo'),
+            showAuthButton: false,
+            code:'',
+            encryptedData:'',
+            iv:'',
+        }
+
+        methods = {
+            onTouch()
+            {
+                console.log('on touch')
+            }
+        }
+
+        onLoad()
+        {
+            this.wxLogin()
+        }
+
+
+        onGetUserInfo(e)
+        {
+            console.log('on get user info')
+            console.log(e)
+            this.$parent.globalData.wxUserInfo = e.detail.userInfo;
+            this.encryptedData = e.detail.encryptedData;
+            this.iv = e.detail.iv;
+            this.login();
+        }
+
+        async wxLogin()
+        {
+            const loginRes = await wepy.login()
+            console.log(loginRes)
+            this.code = loginRes.code
+
+            // 查看授权情况
+            const settingRes = await wepy.getSetting({})
+            console.log(settingRes)
+
+            // 没授权，显示授权按钮
+            if(!settingRes.authSetting['scope.userInfo'])
+            {
+                console.log('not auth')
+                this.showAuthButton = true
+                this.$apply()
+            }
+            else
+            {
+                console.log('all ready auth')
+                // 已经授权，获得用户信息
+                this.showAuthButton = false
+                let getUserInfoRes = await wepy.getUserInfo({withCredentials: true});
+                this.$parent.globalData.wxUserInfo = getUserInfoRes.userInfo;
+                this.encryptedData = getUserInfoRes.encryptedData;
+                this.iv = getUserInfoRes.iv;
+                this.login();
+            }
+        }
+
+        login()
+        {
+            // wepy.showLoading({
+            //    title:'登录中',
+            //    mask:true,
+            // })
+            wepy.request({
+                url: '/api/login',
+                method: 'POST',
+                data: {
+                    wxcode: this.code,
+                    encryptedData: this.encryptedData,
+                    iv: this.iv,
+                    ref: 'wxmini',
+                }
+            }).then(res =>
+            {
+                // wepy.hideLoading()
+                // this.$parent.globalData.bindToken = res.data.bindToken;
+                // this.$redirect('bindSelect')
+                // 没有绑定帐号
+                if(res.data.ret === -2)
+                {
+                    this.$parent.globalData.bindToken = res.data.bindToken;
+                    this.$redirect('bindSelect')
+                }
+                // 已经绑定了帐号，进入主页
+                else if(res.data.success !== false)
+                {
+                    this.$parent.globalData.token = res.data.token;
+                    this.$switch('projects');
+                }
+            })
+        }
+
+        onShareAppMessage(res)
+        {
+            if (res.from === 'button')
+            {
+                // 来自页面内转发按钮
+                console.log(res.target)
+            }
+            return {
+                title: 'SVNBucket，好用的SVN托管服务',
+                path: 'pages/launch'
+            }
+        }
+
+    }
+</script>

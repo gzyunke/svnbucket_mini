@@ -1,0 +1,233 @@
+<style lang="scss">
+
+    $blue: #409EFF;
+    $white: #ffffff;
+
+    page {
+        /*height: 100%;*/
+        background-color: #EFEFF4;
+        font-family: MicrosoftYaHei, 'Microsoft Yahei', 'Helvetica Neue', 'Hiragino Sans GB', 'WenQuanYi Micro Hei', sans-serif;
+    }
+
+</style>
+
+<script>
+    import wepy from 'wepy'
+    import 'wepy-async-function'
+    import {URLRoot} from "./config";
+
+
+    export default class extends wepy.app
+    {
+        config = {
+            pages: [
+                'pages/launch',
+                'pages/tutorial',
+                'pages/bindSelect',
+                'pages/source',
+                'pages/upgrade',
+                'pages/extendTime',
+                'pages/buy',
+                'pages/updateHook',
+                'pages/dirExplorer',
+                'pages/changeDirAuth',
+                'pages/changeRole',
+                'pages/searchMembers',
+                'pages/commitLogDetail',
+                'pages/changePassword',
+                'pages/sourceList',
+                'pages/hooks',
+                'pages/members',
+                'pages/commitLogs',
+                'pages/projectSetting',
+                'pages/forget',
+                'pages/regist',
+                'pages/login',
+                'pages/projects',
+                'pages/timeline',
+                'pages/mine',
+                'pages/detail',
+                'pages/createProject',
+                'pages/updateUserInfo',
+            ],
+            window: {
+                backgroundTextStyle: 'dark',
+                navigationBarBackgroundColor: '#409EFF',
+                navigationBarTitleText: 'WeChat',
+                navigationBarTextStyle: 'white',
+            },
+            tabBar: {
+                color: '#B2B2B2',
+                selectedColor: '#409EFF',
+                borderStyle: 'black',
+                // backgroundColor: 'white',
+                list: [{
+                    pagePath: 'pages/projects',
+                    text: '项目',
+                    iconPath: 'images/projects_unselect.png',
+                    selectedIconPath: 'images/projects.png'
+                }, {
+                    pagePath: 'pages/timeline',
+                    text: '动态',
+                    iconPath: 'images/timeline_unselect.png',
+                    selectedIconPath: 'images/timeline.png'
+                }, {
+                    pagePath: 'pages/mine',
+                    text: '我的',
+                    iconPath: 'images/mine_unselect.png',
+                    selectedIconPath: 'images/mine.png'
+                }]
+            }
+        }
+
+        globalData = {
+            userInfo: {},
+            wxUserInfo: {},
+            token: 'not login',
+            bindToken: '',
+            currentProjectData:{},
+            currentLogInfo:null,
+            refreshProjects: false,
+            refreshMembers: false,
+            refreshHooks: false,
+            // 修改目录权限时传递的权限数据
+            permissions:{},
+            // 修改目录权限的用户ID
+            selectedUids:[],
+            // 是否从添加成员那里进去的目录权限页面
+            isFromNew:false,
+            // 浏览目录选中的路径
+            selectedPath:null,
+            explorerIndex:1,
+            // 修改钩子前保存的数据
+            hookInfo:null,
+            sourceInfo:null,
+        }
+
+        constructor()
+        {
+            super();
+            this.use('promisify');
+
+            // 请求拦截
+            this.intercept('request', {
+                config(p)
+                {
+                    // 某些页面不显示模态窗，会影响下拉上拉的体验
+                    if(
+                        p.url !== '/api/timeline' &&
+                        p.url !== '/api/memberList' &&
+                        p.url !== '/api/projectList' &&
+                        p.url !== '/api/getHookLogs' &&
+                        p.url !== '/api/getHooks' &&
+                        p.url !== '/api/searchUser' &&
+                        p.url !== '/api/getlog')
+                    {
+                        wepy.showLoading({
+                            title:'请求中',
+                            mask:true,
+                        })
+                    }
+
+                    p.header = {
+                        'content-type': 'application/x-www-form-urlencoded'
+                    }
+                    p.header.authorization = this.globalData.token
+                    p.url = URLRoot + p.url;
+                    return p;
+                },
+                // 请求成功后的回调函数
+                success(p)
+                {
+                    if(p.data.success === false && p.data.msg)
+                    {
+                        p.data.dontHiding = true
+                        wepy.showToast({
+                            title: p.data.msg,
+                            icon: 'none',
+                            duration: 2000
+                        })
+                    }
+                    return p;
+                },
+                //请求失败后的回调函数
+                fail(p)
+                {
+                    if(p.data.msg)
+                    {
+                        p.data.dontHiding = true
+                        wepy.showToast({
+                            title: '请求失败，请检查网络后稍后重试',
+                            icon: 'none',
+                            duration: 2000
+                        })
+                    }
+                    return p;
+                },
+                // 请求完成时的回调函数(请求成功或失败都会被执行)
+                complete(p)
+                {
+                    if(p.data.dontHiding !== true)
+                        wepy.hideLoading()
+                }
+            });
+            this.use('requestfix')
+        }
+
+        onLaunch()
+        {
+            this.testAsync()
+        }
+
+        onShow(options)
+        {
+            console.log('on onShow ')
+        }
+
+        onHide()
+        {
+            console.log('on onHide')
+        }
+
+        onError(msg)
+        {
+            console.log('on onError')
+            console.log(msg)
+        }
+
+        sleep(s)
+        {
+            return new Promise((resolve, reject) =>
+            {
+                setTimeout(() =>
+                {
+                    resolve('promise resolved')
+                }, s * 1000)
+            })
+        }
+
+        async testAsync()
+        {
+            const data = await this.sleep(3)
+            console.log(data)
+        }
+
+        getUserInfo(cb)
+        {
+            const self = this;
+            if (this.globalData.userInfo)
+            {
+                return this.globalData.userInfo
+            }
+            wepy.getUserInfo({
+                success(res)
+                {
+                    self.globalData.userInfo = res.userInfo;
+                    console.log('on get user info:')
+                    console.log(self.globalData.userInfo)
+                    cb && cb(res.userInfo);
+                }
+            })
+        }
+    }
+</script>

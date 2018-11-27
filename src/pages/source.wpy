@@ -1,0 +1,98 @@
+<style lang="scss">
+    .code-text
+    {
+        pading: 10rpx 10rpx 10rpx 10rpx
+    }
+</style>
+
+<template>
+    <view>
+        <text class="code-text">{{code}}</text>
+    </view>
+</template>
+
+<script>
+    import wepy from 'wepy'
+
+
+    export default class Index extends wepy.page
+    {
+        config = {
+            navigationBarTitleText: '',
+        };
+
+        data = {
+            pid:'',
+            path:'',
+            code:''
+        }
+
+        methods = {
+        }
+
+        getFileContent()
+        {
+            wepy.request({
+                url: '/api/getFileContent',
+                method: 'POST',
+                data: {
+                    projectId: this.pid,
+                    path: this.path
+                }
+            }).then(res =>
+            {
+                if(res.data.success === false)
+                    return
+
+                this.code = res.data.content
+                this.$apply()
+            })
+        }
+
+        getFileDiff()
+        {
+            wepy.request({
+                url: '/api/getFileDiff',
+                method: 'POST',
+                data: {
+                    projectId: this.pid,
+                    path: this.path,
+                    rev: this.rev,
+                    state: this.state,
+                }
+            }).then(res =>
+            {
+                if(res.data.success === false)
+                    return
+
+                this.code = res.data.diff
+                this.$apply()
+            })
+        }
+
+        onLoad()
+        {
+            let sourceInfo = this.$parent.globalData.sourceInfo
+            if(!sourceInfo)
+                return
+            this.path = sourceInfo.path
+            this.pid = sourceInfo.pid
+
+            if(!sourceInfo.state)
+            {
+                this.getFileContent()
+            }
+            else
+            {
+                this.state = sourceInfo.state
+                this.rev = sourceInfo.rev
+                this.getFileDiff()
+            }
+
+            let paths = this.path.split("/");
+            wepy.setNavigationBarTitle({title: paths[paths.length - 1]})
+
+        }
+
+    }
+</script>

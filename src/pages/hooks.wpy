@@ -1,0 +1,343 @@
+<style lang="scss">
+
+    .top-bar
+    {
+        position: relative;
+        height: 88rpx;
+        font-weight:600;
+        text-align: center;
+        line-height: 98rpx;
+        border-bottom: #E5E5E5 1px solid;
+    }
+
+    .member-text
+    {
+        position: absolute;
+        font-size: 16px;
+        color:#7F8389;
+        left:30rpx;
+    }
+
+    .add-user-text
+    {
+        position: absolute;
+        font-size: 16px;
+        color:#409EFF;
+        right:30rpx;
+    }
+
+    .bottom-container
+    {
+        display: block;
+        position: relative;
+    }
+
+    .menu-group
+    {
+        color: #7F8389;
+        position: relative;
+    }
+
+    .group-title
+    {
+        font-size: 16px;
+        position: relative;
+        padding: 20rpx 0 20rpx 0;
+        left: 30rpx;
+    }
+
+    .list_menu
+    {
+        font-size: 14px;
+        position: relative;
+        height: 88rpx;
+        vertical-align:middle;
+        line-height: 88rpx;
+        margin-bottom: 2rpx;
+        background-color: white;
+    }
+
+    .left_icon
+    {
+        position:absolute;
+        width:36rpx;
+        height:36rpx;
+        left:27rpx;
+        top:26rpx;
+    }
+
+    .left_text
+    {
+        position: absolute;
+        left:30rpx;
+        width: 500rpx;
+        overflow: hidden;
+        text-overflow:ellipsis;
+        white-space: nowrap;
+    }
+
+    .right_text
+    {
+        position: absolute;
+        right:30rpx;
+        color: #BBBBBB;
+    }
+
+    .right_icon
+    {
+        position:absolute;
+        right:42rpx;
+        width:37rpx;
+        height:35rpx;
+        top:30rpx;
+    }
+
+    .no-logs
+    {
+        position:relative;
+        color:#a4a4a4;
+        width:100%;
+        top:47rpx;
+        display: block;
+        text-align: center;
+        font-style:italic;
+    }
+
+    .center-text
+    {
+        display: block;
+        width: 100%;
+        text-align: center;
+    }
+</style>
+<template>
+    <view>
+
+        <view class="top-bar">
+            <text class="member-text">钩子（{{totalCount}}）</text>
+            <text class="add-user-text" @tap="gotoUpdateHook">添加钩子</text>
+        </view>
+
+        <text wx:if="{{datas.length <= 0}}" class="no-logs">
+            还没有配置钩子
+        </text>
+        <view class="bottom-container" wx:if="{{datas.length > 0}}">
+            <view class="menu-group">
+                <view class="group-title">钩子列表</view>
+                <repeat for="{{datas}}" key="index" index="index" item="data">
+                    <view class="list_menu" @tap="showMenu" data-info="{{data}}">
+                        <text class="left_text">{{data.url}}</text>
+                        <image class="right_icon" src="../images/3dot.png"/>
+                    </view>
+                </repeat>
+            </view>
+
+            <view class="menu-group">
+                <view class="group-title">触发记录</view>
+                <repeat for="{{hookLogs}}" key="index" index="index" item="data">
+                    <view class="list_menu">
+                        <text class="left_text">{{data.url}}</text>
+                        <text class="right_text">{{data.success}}</text>
+                        <!--<image class="right_icon" src="../images/arrowRight.png"/>-->
+                    </view>
+                </repeat>
+                <view wx:if="{{hookLogs.length == 0}}" class="list_menu">
+                    <text class="center-text">暂无触发记录</text>
+                </view>
+            </view>
+        </view>
+    </view>
+</template>
+
+<script>
+    import wepy from 'wepy'
+    import {tools} from '../common/tools'
+
+    export default class Index extends wepy.page {
+        config = {
+            navigationBarTitleText: '钩子',
+            enablePullDownRefresh: true,
+        };
+
+        data = {
+            page: 1,
+            pageSize: 20,
+            pid: '',
+            datas: [],
+            hookLogs:[],
+            hasMore: true,
+            totalCount: 0,
+            resetData: false,
+        }
+
+        methods = {
+            async showMenu(e)
+            {
+                let info = e.currentTarget.dataset.info
+                // console.log(info)
+                let res = await wepy.showActionSheet({itemList: ['测试', '修改', '删除']})
+                // console.log(res)
+                if(res.tapIndex === 2)
+                {
+                    this.deleteHook(info._id)
+                }
+                else if(res.tapIndex === 1)
+                {
+                    this.$parent.globalData.hookInfo = info
+                    wepy.navigateTo({
+                        url: 'updateHook'
+                    })
+                }
+                else if(res.tapIndex === 0)
+                {
+                    this.testHook(info._id)
+                }
+            },
+
+            gotoUpdateHook()
+            {
+                if(this.$parent.globalData.currentProjectData.role === 'normal')
+                {
+                    wepy.showToast({
+                        title: '只有创建者和管理员才能操作',
+                        icon: 'none',
+                        duration: 2000
+                    })
+                    return
+                }
+                wepy.navigateTo({
+                    url: 'updateHook'
+                })
+            }
+        }
+
+        onLoad(options)
+        {
+            this.pid = this.$parent.globalData.currentProjectData._id
+            this.getHookLogs()
+            this.getDatas()
+        }
+
+        onShow()
+        {
+            if(this.$parent.globalData.refreshHooks)
+            {
+                this.onPullDownRefresh()
+                this.$parent.globalData.refreshHooks = false
+            }
+        }
+
+        deleteHook(hid)
+        {
+            wepy.request({
+                url: '/api/deleteHook',
+                method: 'GET',
+                data: {
+                    id: hid,
+                }
+            }).then(res =>
+            {
+                if (res.data.success === false)
+                    return
+                wepy.showToast({
+                    title: '删除成功',
+                    icon: 'none',
+                    duration: 2000
+                })
+                this.onPullDownRefresh()
+            })
+        }
+
+        testHook(hid)
+        {
+            wepy.request({
+                url: '/api/testHook',
+                method: 'POST',
+                data: {
+                    hookid: hid,
+                }
+            }).then(res =>
+            {
+                if (res.data.success === false)
+                    return
+                wepy.showToast({
+                    title: '请求发送成功',
+                    icon: 'none',
+                    duration: 2000
+                })
+                this.onPullDownRefresh()
+            })
+        }
+
+        getDatas()
+        {
+            wepy.request({
+                url: '/api/getHooks',
+                method: 'POST',
+                data: {
+                    projectId: this.pid,
+                    page: 1,
+                    pageSize: 10,
+                }
+            }).then(res =>
+            {
+                wepy.stopPullDownRefresh();
+                if(res.data.success === false)
+                    return
+
+                this.datas = res.data.list
+                this.totalCount = res.data.totalCount;
+                this.$apply()
+            })
+        }
+
+        getHookLogs()
+        {
+            wepy.request({
+                url: '/api/getHookLogs',
+                method: 'POST',
+                data: {
+                    projectId: this.pid,
+                    page: this.page,
+                    pageSize: this.pageSize,
+                }
+            }).then(res =>
+            {
+                wepy.stopPullDownRefresh();
+                if(res.data.success === false)
+                    return
+
+                if(this.resetData)
+                {
+                    this.hookLogs = [];
+                    this.resetData = false;
+                }
+
+                res.data.list.forEach((value, index, array) => {
+
+                    this.hookLogs.push(value)
+                });
+                this.hasMore = res.data.list.length >= this.pageSize;
+                this.$apply();
+            })
+        }
+
+        onPullDownRefresh()
+        {
+            this.page = 1;
+            this.resetData = true;
+            this.getHookLogs()
+            this.getDatas()
+        }
+
+        onReachBottom()
+        {
+            console.log('onReachBottom')
+            if(this.hasMore)
+            {
+                this.page += 1;
+                this.getHookLogs()
+            }
+        }
+    }
+</script>

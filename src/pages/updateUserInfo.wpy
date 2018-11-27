@@ -1,0 +1,89 @@
+<style lang="scss">
+
+    .input-container
+    {
+        margin-top: 96rpx;
+        font-size: 16px;
+        background-color: white;
+        height: 96rpx;
+        position: relative;
+    }
+
+    .form-input
+    {
+        position: absolute;
+        left:30rpx;
+        height:96rpx;
+        width:690rpx;
+
+    }
+
+    .ct-button
+    {
+        margin-top: 88rpx;
+        width: 690rpx;
+        background-color: #409EFF;
+        color: white;
+        height: 94rpx;
+        line-height: 94rpx;
+    }
+
+</style>
+<template>
+    <view>
+        <view>
+            <view class="input-container">
+                <input placeholder="{{oldValue}}" class="form-input" value="{{value}}" bindinput="onInput" placeholder-style="color:#B2B2B2"/>
+            </view>
+            <button @tap="onConfirm" class="ct-button">保存修改</button>
+        </view>
+    </view>
+</template>
+
+<script>
+    import wepy from 'wepy'
+
+    export default class Index extends wepy.page
+    {
+        data = {
+            value: '',
+            title: '',
+            key: '',
+            oldValue: ''
+        }
+
+        methods = {
+            onConfirm()
+            {
+                let param = {}
+                param[this.key] = this.value
+                wepy.request({
+                    url: '/api/saveUser',
+                    method: 'POST',
+                    data: param
+                }).then(res =>
+                {
+                    if(res.data.success !== false)
+                    {
+                        this.$parent.globalData.userInfo[this.key] = this.value
+                        wepy.navigateBack()
+                    }
+                })
+            },
+        }
+
+        onInput(e)
+        {
+            this.value = e.detail.value
+        }
+
+        onLoad(options)
+        {
+            wepy.setNavigationBarTitle({title: '修改' + options.title})
+            this.oldValue = options.value
+            this.title = options.title
+            this.key = options.key
+        }
+
+    }
+</script>

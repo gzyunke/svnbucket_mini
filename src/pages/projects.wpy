@@ -1,0 +1,235 @@
+<style lang="scss">
+
+    .top-menu {
+        position: relative;
+        font-size: 16px;
+        height: 94rpx;
+        line-height: 94rpx;
+        vertical-align: middle;
+        border-bottom: #E5E5E5 1px solid;
+        font-weight:600;
+    }
+
+    .project-count {
+        position: absolute;
+        left: 30rpx;
+        color: #7F8389;
+    }
+
+    .create-project {
+        position: absolute;
+        right: 30rpx;
+        color: #409EFF;
+    }
+
+    .no-project {
+        position: absolute;
+        color: #409EFF;
+        width: 100%;
+        line-height: 500rpx;
+        text-align: center;
+        vertical-align: middle;
+        font-size: 16px;
+    }
+
+    .project-container
+    {
+        margin-top: 30rpx;
+    }
+
+    .project-item {
+        position: relative;
+        float: left;
+        margin: 0 0 20rpx 30rpx;
+    }
+
+    .cover-img {
+        width: 332rpx;
+        height: 166rpx;
+        border-radius: 8rpx;
+    }
+
+    .star-img
+    {
+        position: absolute;
+        right: 17rpx;
+        width: 48rpx;
+        height: 54rpx;
+        top: -1rpx;
+    }
+
+    .project-name {
+        color: white;
+        position: absolute;
+        left: 24rpx;
+        top: 9rpx;
+        width: 240rpx;
+        font-size: 14px;
+        overflow: hidden;
+        text-overflow:ellipsis;
+        white-space: nowrap;
+    }
+
+</style>
+<template>
+    <view>
+        <view class="top-menu">
+            <text class="project-count">项目({{totalCount}})</text>
+            <navigator url="createProject" hover-class="none">
+                <text class="create-project">创建项目</text>
+            </navigator>
+        </view>
+        <view class="project-container">
+            <repeat for="{{datas}}" key="index" index="index" item="project">
+                <navigator url="detail?pid={{project._id}}" hover-class="none" class="project-item">
+                    <image class="cover-img" src="{{project.imgURL}}"/>
+                    <span class="project-name">{{project.name}}</span>
+                    <image class="star-img" @tap.capture.stop="starProject" data-star="{{project.star}}" data-pid="{{project._id}}"
+                           src="../images/{{project.star > 1 ? 'star-light' : 'star'}}.png"/>
+                </navigator>
+            </repeat>
+            <navigator url="createProject" hover-class="none" class="project-item">
+                <image class="cover-img" src="../images/new.png"/>
+            </navigator>
+        </view>
+    </view>
+</template>
+
+<script>
+    import wepy from 'wepy'
+    import {tools} from '../common/tools'
+
+    export default class Index extends wepy.page
+    {
+        config = {
+            navigationBarTitleText: '项目',
+            enablePullDownRefresh: true,
+        };
+
+        data = {
+            page: 1,
+            pageSize: 30,
+            datas:[],
+            hasMore: true,
+            totalCount: 0,
+            resetData: false,
+        }
+
+        methods =
+        {
+            starProject(e)
+            {
+                let star = e.currentTarget.dataset.star
+                let pid = e.currentTarget.dataset.pid
+                wepy.request({
+                    url: '/api/starProject',
+                    method: 'POST',
+                    data: {
+                        projectId: pid,
+                        star: star > 1 ? 0 : 1,
+                    }
+                }).then(res =>
+                {
+                    if(res.data.success === false)
+                        return
+
+                    this.onPullDownRefresh()
+                })
+            }
+        }
+
+        onLoad()
+        {
+            this.getDatas();
+            this.getUserInfo()
+        }
+
+        onShow()
+        {
+            console.log('on show')
+            if (this.$parent.globalData.refreshProjects)
+            {
+                console.log('refresh project list')
+                this.$parent.globalData.refreshProjects = false
+                this.onPullDownRefresh();
+            }
+        }
+
+        getUserInfo()
+        {
+            wepy.request({
+                url: '/api/userInfo',
+                method: 'POST',
+                data: {
+                }
+            }).then(res =>
+            {
+                if(res.data.success === false)
+                    return;
+                this.$parent.globalData.userInfo = res.data;
+            })
+        }
+
+        getDatas()
+        {
+            wepy.request({
+                url: '/api/projectList',
+                method: 'POST',
+                data: {
+                    page: this.page,
+                    pageSize: this.pageSize,
+                }
+            }).then(res =>
+            {
+                wepy.stopPullDownRefresh();
+                if(res.data.success === false)
+                    return
+
+                if(this.resetData)
+                {
+                    this.datas = [];
+                    this.resetData = false;
+                }
+
+                res.data.list.forEach((value, index, array) => {
+                    value.imgURL = tools.imgFullPath(value.imgURL, 'cover', 1, 332, 166);
+                    this.datas.push(value)
+                });
+                this.totalCount = res.data.totalCount;
+                this.hasMore = res.data.list.length >= this.pageSize;
+                this.$apply();
+            })
+        }
+
+
+        onPullDownRefresh()
+        {
+            this.page = 1;
+            this.resetData = true;
+            this.getDatas()
+        }
+
+        onReachBottom()
+        {
+            console.log('onReachBottom')
+            if(this.hasMore)
+            {
+                this.page += 1;
+                this.getDatas()
+            }
+        }
+
+        onShareAppMessage(res)
+        {
+            if (res.from === 'button')
+            {
+                // 来自页面内转发按钮
+                console.log(res.target)
+            }
+            return {
+                title: 'SVNBucket，好用的SVN托管服务',
+                path: 'pages/launch'
+            }
+        }
+    }
+</script>
