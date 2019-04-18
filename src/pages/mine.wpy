@@ -179,14 +179,8 @@
             <view class="buy-container">
                 <text class="user-type">{{accountTypeName}}：{{reposSize}} / {{reposMaxSize}}</text>
                 <text class="expire-time">{{expireAt}}</text>
-                <navigator wx:if="{{isFreeUser}}" url="buy" hover-class="none">
-                    <button class="buy-button">购买空间</button>
-                </navigator>
-                <navigator wx:if="{{!isFreeUser}}" url="upgrade" hover-class="none">
-                    <button class="upgrade-button">升级</button>
-                </navigator>
-                <navigator wx:if="{{!isFreeUser}}" url="extendTime" hover-class="none">
-                    <button class="extend-button">续费</button>
+                <navigator url="buy" hover-class="none">
+                    <button class="buy-button">购买升级</button>
                 </navigator>
             </view>
 

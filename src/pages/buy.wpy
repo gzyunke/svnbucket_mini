@@ -68,13 +68,14 @@
         <view class="title-text">选择空间</view>
         <repeat for="{{accountConfig}}" key="index" index="index" item="data">
             <view class="list-item" @tap="onSelectAccountType" data-info="{{data}}">
-                <view class="left-text">{{data.name}}</view>
+                <view class="left-text" wx:if="{{data.accountType >= myAccountType}}">{{data.name}}</view>
+                <view class="left-text" style="color: #C0C4CC" wx:if="{{myAccountType > data.accountType}}">{{data.name}}</view>
                 <icon wx:if="{{accountType === data.accountType}}" type="success_no_circle" size="20" class="right-icon"/>
             </view>
         </repeat>
 
         <view class="title-text">选择时长</view>
-        <repeat for="{{monthList}}" key="index" index="index" item="data">
+        <repeat for="{{monthList}}" key="index" index="index" item="data" >
             <view class="list-item" @tap="onSelectMonth" data-info="{{data}}">
                 <view class="left-text">
                     {{data.month}}个月
@@ -85,7 +86,7 @@
             </view>
         </repeat>
 
-        <button @tap="createOrder" class="ct-button">支付{{totalMoney}}元</button>
+        <button @tap="createOrder" class="ct-button" >支付{{totalMoney}}元</button>
 
         <text class="tip-text">如需定制服务，请联系我们gzyunke@qq.com</text>
 
@@ -107,13 +108,14 @@
             accountType:'3',
             month:12,
             buyType:'',
-            maxAccountType:'',
             moneyDict:{},
             accountConfig:[],
             discountConfig:{},
+            myAccountType: 0,
             monthList:[
+                // {month:0, discount:100},
                 {month:1, discount:100},
-                {month:2, discount:100},
+                // {month:2, discount:100},
                 {month:3, discount:100},
                 {month:6, discount:88},
                 {month:12, discount:83},
@@ -123,7 +125,16 @@
         methods = {
             onSelectAccountType(e)
             {
-                let info = e.currentTarget.dataset.info
+                let info = e.currentTarget.dataset.info;
+                if(info.accountType < this.$parent.globalData.userInfo.accountType)
+                {
+                    wepy.showToast({
+                        title: '不能小于当前的套餐',
+                        icon: 'none',
+                        duration: 2000
+                    })
+                    return
+                }
                 this.accountType = info.accountType
                 console.log(this.accountType)
             },
@@ -139,15 +150,30 @@
         computed = {
             totalMoney ()
             {
-                let discount = this.discountConfig[this.month]
-                let money = this.moneyDict[this.accountType] * this.month
-                if(discount)
+                let discount = this.discountConfig[this.month] ? this.discountConfig[this.month] : 1;
+                let upgradeMoney = 0;
+                let now = new Date().getTime() / 1000;
+                let remainSeconds = this.$parent.globalData.userInfo.expireAt - now;
+                if(remainSeconds < 0)
+                    remainSeconds = 0
+
+                // 如果之前购买的还没到期，套餐又不一样，计算升级差价
+                if(remainSeconds > 0 && this.accountType !== this.$parent.globalData.userInfo.accountType)
                 {
-                    console.log(discount)
-                    money = tools.round(money * discount, 2)
-                    console.log(money)
+                    let oldMonthPrice = this.moneyDict[this.$parent.globalData.userInfo.accountType];
+                    let newMonthPrice = this.moneyDict[this.accountType];
+                    let diffPrice = newMonthPrice - oldMonthPrice;
+                    console.log('remainSeconds:' + remainSeconds + ', old price:' + oldMonthPrice + ', new price:' + newMonthPrice)
+                    if(diffPrice > 0)
+                        upgradeMoney = diffPrice * (remainSeconds / (86400 * 30))
                 }
-                return money
+                let newBuyMoney = this.moneyDict[this.accountType] * this.month * discount;
+                console.log('upgradeMoney:' + upgradeMoney + ', newBuyMoney:' + newBuyMoney);
+                return tools.round(newBuyMoney + upgradeMoney, 2)
+            },
+            isExpired()
+            {
+                return new Date().getTime() / 1000 >= this.$parent.globalData.userInfo.expireAt;
             }
         }
 
@@ -172,22 +198,40 @@
                     let size = tools.formateSize(data.reposMaxSize)
                     this.moneyDict[id] = data.money
                     this.accountConfig.push({name:data.name + '，空间:' + size + '，' + data.money + '元/月', accountType:id})
-                    this.maxAccountType = id
                 }
                 this.discountConfig = res.data.discountConfig
+
+                // 自动选中下一级
+                this.nextAccountType = this.$parent.globalData.userInfo.accountType;
+                for(let index in this.accountConfig)
+                {
+                    this.nextAccountType = this.accountConfig[index].accountType;
+                    if(this.accountConfig[index].accountType > this.$parent.globalData.userInfo.accountType)
+                        break;
+                }
+                this.accountType = this.nextAccountType + '';
+
                 this.$apply();
             })
         }
 
         createOrder()
         {
+            if(this.totalMoney <= 0)
+            {
+                wepy.showToast({
+                    title: '支付金额必须大于0',
+                    icon: 'none',
+                    duration: 2000
+                })
+                return;
+            }
             wepy.request({
                 url: '/api/createOrder',
                 method: 'POST',
                 data: {
                     accountType:this.accountType,
                     month:this.month,
-                    buyType:0,
                     totalMoney: this.totalMoney,
                     isMiniProgram: true,
                 }
@@ -235,6 +279,11 @@
         onLoad()
         {
             this.getDatas()
+            this.myAccountType = this.$parent.globalData.userInfo.accountType;
+            if(!this.isExpired)
+            {
+                this.monthList.unshift({month:0, discount:100})
+            }
         }
 
     }
